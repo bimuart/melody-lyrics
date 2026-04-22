@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>歌词旋律整合测试</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei",
+          sans-serif;
+        background: #f7f8fa;
+        color: #1f2329;
+      }
+      .container {
+        max-width: 1320px;
+        margin: 0 auto;
+      }
+      .top,
+      .bottom {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #d9dde3;
+        border-radius: 10px;
+        padding: 10px;
+      }
+      .title {
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      textarea,
+      pre {
+        width: 100%;
+        box-sizing: border-box;
+        border-radius: 8px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+          monospace;
+      }
+      textarea {
+        min-height: 240px;
+        border: 1px solid #cdd5df;
+        padding: 10px;
+        line-height: 1.45;
+      }
+      pre {
+        min-height: 220px;
+        margin: 0;
+        background: #0f1720;
+        color: #d6e4f7;
+        padding: 10px;
+        overflow: auto;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin: 12px 0;
+        flex-wrap: wrap;
+      }
+      button {
+        border: none;
+        border-radius: 8px;
+        padding: 9px 12px;
+        background: #1677ff;
+        color: #fff;
+        cursor: pointer;
+      }
+      .secondary {
+        background: #e9edf2;
+        color: #1f2329;
+      }
+      .status {
+        margin: 6px 0 12px;
+        font-size: 13px;
+      }
+      .ok {
+        color: #0f9d58;
+      }
+      .err {
+        color: #d93025;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>歌词 + 音名 三维数组整合</h2>
+
+      <div class="actions">
+        <button id="buildLyricMiddleBtn">由左侧歌词生成中间层</button>
+        <button class="secondary" id="buildAllBtn">生成三个数组并整合</button>
+      </div>
+      <div id="statusText" class="status"></div>
+
+      <div class="top">
+        <div class="card">
+          <div class="title">左侧：歌词原文</div>
+          <textarea id="lyricsRawInput"></textarea>
+        </div>
+        <div class="card">
+          <div class="title">中间：可编辑歌词读音中间层</div>
+          <textarea id="lyricMiddleInput"></textarea>
+        </div>
+        <div class="card">
+          <div class="title">右侧：可编辑音名中间层（分句）</div>
+          <textarea id="melodyMiddleInput"></textarea>
+        </div>
+      </div>
+
+      <div style="height: 12px"></div>
+
+      <div class="bottom">
+        <div class="card">
+          <div class="title">左下：歌词三维数组</div>
+          <pre id="lyrics3dOutput"></pre>
+        </div>
+        <div class="card">
+          <div class="title">中下：新整合数组</div>
+          <pre id="integrated3dOutput"></pre>
+        </div>
+        <div class="card">
+          <div class="title">右下：音名三维数组</div>
+          <pre id="melody3dOutput"></pre>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/pinyin-pro/dist/index.js"></script>
+    <script src="./lyrics-parser.js"></script>
+    <script src="./melody-parser.js"></script>
+    <script src="./integrator.js"></script>
+    <script>
+      const lyricsRawInput = document.getElementById("lyricsRawInput");
+      const lyricMiddleInput = document.getElementById("lyricMiddleInput");
+      const melodyMiddleInput = document.getElementById("melodyMiddleInput");
+      const lyrics3dOutput = document.getElementById("lyrics3dOutput");
+      const integrated3dOutput = document.getElementById("integrated3dOutput");
+      const melody3dOutput = document.getElementById("melody3dOutput");
+      const statusText = document.getElementById("statusText");
+      const buildLyricMiddleBtn = document.getElementById("buildLyricMiddleBtn");
+      const buildAllBtn = document.getElementById("buildAllBtn");
+
+      lyricsRawInput.value = ["你好世界", "一起唱歌吧"].join("\n");
+      melodyMiddleInput.value = ["C4 D4 E4 F4", "G4-A4 B4 C5"].join("\n");
+
+      function setStatus(text, isError) {
+        statusText.className = "status " + (isError ? "err" : "ok");
+        statusText.textContent = text;
+      }
+
+      function buildLyricMiddle() {
+        const parsed = window.LyricParser.parseLyricsTo3DArray(lyricsRawInput.value);
+        const lines = window.LyricParser.formatMiddleLayer(parsed);
+        lyricMiddleInput.value = lines.join("\n");
+      }
+
+      function buildAll() {
+        try {
+          const lyrics3D = window.LyricParser.parseMiddleLayerTo3DArray(lyricMiddleInput.value);
+          const melody3D = window.MelodyParser.sentenceTextTo3DArray(melodyMiddleInput.value);
+          const merged = window.Integrator.integrateLyricsMelody3D(lyrics3D, melody3D);
+
+          lyrics3dOutput.textContent = JSON.stringify(lyrics3D, null, 2);
+          melody3dOutput.textContent = JSON.stringify(melody3D, null, 2);
+
+          if (!merged.ok) {
+            integrated3dOutput.textContent = "";
+            setStatus(merged.message, true);
+            return;
+          }
+          integrated3dOutput.textContent = JSON.stringify(merged.integrated, null, 2);
+          setStatus(merged.message, false);
+        } catch (err) {
+          setStatus(`处理失败：${err.message || String(err)}`, true);
+        }
+      }
+
+      buildLyricMiddleBtn.addEventListener("click", buildLyricMiddle);
+      buildAllBtn.addEventListener("click", buildAll);
+      lyricsRawInput.addEventListener("input", () => {
+        buildLyricMiddle();
+        buildAll();
+      });
+      lyricMiddleInput.addEventListener("input", buildAll);
+      melodyMiddleInput.addEventListener("input", buildAll);
+      buildLyricMiddle();
+      buildAll();
+    </script>
+  </body>
+  </html>

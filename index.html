@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>歌词三维数组解析演示</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        background: #f7f8fa;
+        color: #1f2329;
+      }
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 0 0 12px;
+      }
+      .desc {
+        color: #5c616b;
+        margin-bottom: 16px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 180px;
+        border: 1px solid #d0d7de;
+        border-radius: 8px;
+        padding: 12px;
+        box-sizing: border-box;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      #middleOutput {
+        min-height: 130px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+          monospace;
+      }
+      .actions {
+        margin: 12px 0 16px;
+        display: flex;
+        gap: 10px;
+      }
+      button {
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .primary {
+        background: #1677ff;
+        color: white;
+      }
+      .secondary {
+        background: #e9edf2;
+        color: #1f2329;
+      }
+      pre {
+        background: #0f1720;
+        color: #d7e3f4;
+        border-radius: 8px;
+        padding: 14px;
+        overflow: auto;
+        line-height: 1.45;
+        font-size: 13px;
+      }
+      .tips {
+        margin-top: 14px;
+        color: #5c616b;
+        font-size: 13px;
+      }
+      .section-title {
+        margin: 12px 0 8px;
+        font-size: 14px;
+        color: #3f4854;
+      }
+      code {
+        background: #eef2f7;
+        padding: 1px 4px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>歌词解析为三维数组</h1>
+      <div class="desc">
+        结构：按换行拆句子 → 按标点拆分词片段 → 每个字解析为
+        <code>[单字, 拼音, 声调]</code>
+      </div>
+
+      <textarea id="lyricsInput"></textarea>
+
+      <div class="actions">
+        <button class="primary" id="parseBtn">解析歌词</button>
+        <button class="secondary" id="loadDemoBtn">加载示例</button>
+      </div>
+
+      <div class="section-title">中间层（汉字 + 拼音 + 音调，可编辑）</div>
+      <textarea id="middleOutput"></textarea>
+      <div class="section-title">最终三维数组</div>
+      <pre id="output"></pre>
+
+      <div class="tips">
+        输入格式：直接写汉字歌词（不需要手写拼音）。<br />
+        使用公共库 <code>pinyin-pro</code> 解析拼音，若某字解析失败则返回
+        <code>["字", "", 0]</code>。<br />
+        你可以直接编辑中间层，格式示例：<code>你(ni3)好(hao3) / 世(shi4)界(jie4)</code>。
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/pinyin-pro/dist/index.js"></script>
+    <script src="./lyrics-parser.js"></script>
+    <script>
+      const demoText = [
+        "你好，世界！",
+        "今天天气不错。",
+        "一起唱歌吧！",
+      ].join("\n");
+
+      const input = document.getElementById("lyricsInput");
+      const middleOutput = document.getElementById("middleOutput");
+      const output = document.getElementById("output");
+      const parseBtn = document.getElementById("parseBtn");
+      const loadDemoBtn = document.getElementById("loadDemoBtn");
+      const applyMiddleBtn = document.createElement("button");
+      applyMiddleBtn.className = "secondary";
+      applyMiddleBtn.id = "applyMiddleBtn";
+      applyMiddleBtn.textContent = "根据中间层生成结果";
+      document.querySelector(".actions").appendChild(applyMiddleBtn);
+
+      input.value = demoText;
+
+      function renderResult() {
+        const parsed = window.parseLyricsTo3DArray(input.value);
+        const middle = window.formatMiddleLayer(parsed);
+        middleOutput.value = middle.map((line) => (typeof line === "string" ? line : "")).join("\n");
+        output.textContent = JSON.stringify(parsed, null, 2);
+      }
+
+      function renderFromMiddleLayer() {
+        const parsed = window.parseMiddleLayerTo3DArray(middleOutput.value);
+        output.textContent = JSON.stringify(parsed, null, 2);
+      }
+
+      parseBtn.addEventListener("click", renderResult);
+      applyMiddleBtn.addEventListener("click", renderFromMiddleLayer);
+      loadDemoBtn.addEventListener("click", () => {
+        input.value = demoText;
+        renderResult();
+      });
+
+      renderResult();
+    </script>
+  </body>
+  </html>

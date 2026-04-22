@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MIDI 解析与反解析测试</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        background: #f7f8fa;
+        color: #1f2329;
+      }
+      .container {
+        max-width: 1080px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 10px;
+      }
+      .desc {
+        color: #5c616b;
+        margin-bottom: 12px;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 12px 0;
+      }
+      button,
+      input[type="file"] {
+        font-size: 14px;
+      }
+      button {
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        cursor: pointer;
+      }
+      .primary {
+        background: #1677ff;
+        color: #fff;
+      }
+      .secondary {
+        background: #e9edf2;
+        color: #1f2329;
+      }
+      textarea,
+      pre {
+        width: 100%;
+        box-sizing: border-box;
+        border-radius: 8px;
+      }
+      textarea {
+        min-height: 300px;
+        border: 1px solid #d0d7de;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+          monospace;
+        line-height: 1.5;
+      }
+      pre {
+        background: #0f1720;
+        color: #d7e3f4;
+        padding: 12px;
+        overflow: auto;
+      }
+      .section {
+        margin-top: 14px;
+      }
+      .hint {
+        color: #5c616b;
+        font-size: 13px;
+      }
+      .ok {
+        color: #0f9d58;
+      }
+      .err {
+        color: #d93025;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>MIDI 解析 / 播放 / 反解析</h1>
+      <div class="desc">
+        上传 MIDI 后会解析为可编辑音名列表。你可修改后直接浏览器播放，并导出新的 MIDI 文件。
+      </div>
+
+      <div class="actions">
+        <input id="midiFileInput" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" />
+        <button class="primary" id="parseBtn">解析文件</button>
+        <label
+          >每句小节数
+          <select id="barsPerSentence">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </label>
+        <label
+          >分句起始偏移
+          <select id="offsetFraction">
+            <option value="0.75">+0.75</option>
+            <option value="0.5">+0.5</option>
+            <option value="0.25">+0.25</option>
+            <option value="0" selected>+0</option>
+          </select>
+        </label>
+        <button class="secondary" id="regroupBtn">按设置重新分句</button>
+        <button class="secondary" id="to3dBtn">中间层转三维数组</button>
+        <button class="secondary" id="playBtn">播放当前列表</button>
+        <button class="secondary" id="stopBtn">停止播放</button>
+        <button class="secondary" id="exportBtn">导出修改后 MIDI</button>
+      </div>
+
+      <div class="section">
+        <div><strong>中间层（可编辑音名分句）</strong></div>
+        <div class="hint">
+          仅展示音名，按小节分句并换行。每个音名以空格分隔，例如：`C4 D4 E4`。<br />
+          可插入 `/`、`\`、`|` 等标记符号，不会影响播放和导出。<br />
+          三维数组解析中：`G4-F4`、`G4_F4`、`G4F4` 会被合并为同一个最内层元素。
+        </div>
+        <textarea id="notesEditor" placeholder="请先上传并解析 MIDI 文件"></textarea>
+      </div>
+
+      <div class="section">
+        <div><strong>三维数组展示</strong></div>
+        <pre id="array3dOutput"></pre>
+      </div>
+
+      <div class="section">
+        <div><strong>解析信息</strong></div>
+        <pre id="metaOutput"></pre>
+      </div>
+
+      <div class="section hint" id="statusText"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js"></script>
+    <script src="./melody-parser.js"></script>
+    <script>
+      const midiFileInput = document.getElementById("midiFileInput");
+      const parseBtn = document.getElementById("parseBtn");
+      const playBtn = document.getElementById("playBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const exportBtn = document.getElementById("exportBtn");
+      const to3dBtn = document.getElementById("to3dBtn");
+      const regroupBtn = document.getElementById("regroupBtn");
+      const barsPerSentenceSelect = document.getElementById("barsPerSentence");
+      const offsetFractionSelect = document.getElementById("offsetFraction");
+      const notesEditor = document.getElementById("notesEditor");
+      const array3dOutput = document.getElementById("array3dOutput");
+      const metaOutput = document.getElementById("metaOutput");
+      const statusText = document.getElementById("statusText");
+
+      let currentParsed = null;
+      let currentSynth = null;
+      let templateNotes = [];
+      let timingInfo = { bpm: 120, beatsPerBar: 4 };
+
+      function setStatus(text, isError) {
+        statusText.className = isError ? "hint err" : "hint ok";
+        statusText.textContent = text;
+      }
+
+      async function parseMidiFile() {
+        const file = midiFileInput.files && midiFileInput.files[0];
+        if (!file) {
+          setStatus("请先选择一个 MIDI 文件。", true);
+          return;
+        }
+        try {
+          const buf = await file.arrayBuffer();
+          currentParsed = window.MidiParser.parseMidiArrayBuffer(buf);
+          const notes = window.MidiParser.flattenNotes(currentParsed);
+          templateNotes = notes;
+          timingInfo = window.MidiParser.getTimingInfo(currentParsed);
+          notesEditor.value = window.MidiParser.notesToSentenceText(notes, {
+            bpm: timingInfo.bpm,
+            beatsPerBar: timingInfo.beatsPerBar,
+            barsPerSentence: Number(barsPerSentenceSelect.value),
+            offsetFraction: Number(offsetFractionSelect.value),
+          });
+          update3DArrayView();
+
+          metaOutput.textContent = JSON.stringify(
+            {
+              fileName: file.name,
+              header: currentParsed.header,
+              timeSignature: `${timingInfo.numerator}/${timingInfo.denominator}`,
+              beatsPerBar: timingInfo.beatsPerBar,
+              trackCount: currentParsed.tracks.length,
+              noteCount: notes.length,
+            },
+            null,
+            2
+          );
+          setStatus(`解析成功：${file.name}，共 ${notes.length} 个音符。`, false);
+        } catch (err) {
+          setStatus(`解析失败：${err.message || String(err)}`, true);
+        }
+      }
+
+      function parseEditorNotes() {
+        const result = window.MidiParser.sentenceTextToNotes(notesEditor.value, templateNotes);
+        if (result.errors.length > 0) {
+          throw new Error(result.errors.join(" | "));
+        }
+        return result.notes;
+      }
+
+      function update3DArrayView() {
+        const arr3d = window.MidiParser.sentenceTextTo3DArray(notesEditor.value);
+        array3dOutput.textContent = JSON.stringify(arr3d, null, 2);
+      }
+
+      function regroupByCurrentConfig() {
+        try {
+          if (!templateNotes.length) {
+            setStatus("请先解析 MIDI 文件。", true);
+            return;
+          }
+          notesEditor.value = window.MidiParser.notesToSentenceText(templateNotes, {
+            bpm: timingInfo.bpm,
+            beatsPerBar: timingInfo.beatsPerBar,
+            barsPerSentence: Number(barsPerSentenceSelect.value),
+            offsetFraction: Number(offsetFractionSelect.value),
+          });
+          update3DArrayView();
+          setStatus("已按当前设置重新分句。", false);
+        } catch (err) {
+          setStatus(`分句失败：${err.message || String(err)}`, true);
+        }
+      }
+
+      async function playFromEditor() {
+        try {
+          const notes = parseEditorNotes();
+          if (currentSynth && typeof currentSynth.dispose === "function") {
+            currentSynth.dispose();
+          }
+          currentSynth = await window.MidiParser.playNotes(notes);
+          setStatus(`开始播放，共 ${notes.length} 个音符。`, false);
+        } catch (err) {
+          setStatus(`播放失败：${err.message || String(err)}`, true);
+        }
+      }
+
+      function stopPlayback() {
+        window.MidiParser.stopPlayback();
+        if (currentSynth && typeof currentSynth.dispose === "function") {
+          currentSynth.dispose();
+          currentSynth = null;
+        }
+        setStatus("已停止播放。", false);
+      }
+
+      function exportMidi() {
+        try {
+          const notes = parseEditorNotes();
+          const midi = window.MidiParser.buildMidiFromNotes(notes, { bpm: 120 });
+          const bytes = midi.toArray();
+          const blob = new Blob([bytes], { type: "audio/midi" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "edited.mid";
+          a.click();
+          URL.revokeObjectURL(url);
+          setStatus("已导出 edited.mid", false);
+        } catch (err) {
+          setStatus(`导出失败：${err.message || String(err)}`, true);
+        }
+      }
+
+      parseBtn.addEventListener("click", parseMidiFile);
+      regroupBtn.addEventListener("click", regroupByCurrentConfig);
+      to3dBtn.addEventListener("click", update3DArrayView);
+      playBtn.addEventListener("click", playFromEditor);
+      stopBtn.addEventListener("click", stopPlayback);
+      exportBtn.addEventListener("click", exportMidi);
+      notesEditor.addEventListener("input", update3DArrayView);
+    </script>
+  </body>
+  </html>
