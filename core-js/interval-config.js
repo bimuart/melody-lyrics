@@ -6,6 +6,8 @@
  *   前端渲染偏差高亮配置（zero / lowMax / colors）。
  * - SINGLE_CHAR_INTERVAL_RANGES:
  *   单字校验区间配置，key 为声调，value 为 [min, max]，用于最后音-第一音校验。
+ * - SINGLE_CHAR_UNDERLINE_COLOR:
+ *   单字校验不通过时的下划线颜色。
  */
 (function attachIntervalConfig(global) {
   "use strict";
@@ -22,7 +24,7 @@
     "04": [-30, 30],
     "10": [-30, 30],
     "11": [-1, 1],
-    "12": [-7, -1],
+    "12": [-7, 0],
     "13": [-30, -2],
     "14": [0, 7],
     "20": [-30, 2],
@@ -37,7 +39,7 @@
     "34": [2, 30],
     "40": [0, -30],
     "41": [-7, 1],
-    "42": [7, -1],
+    "42": [-7, -1],
     "43": [-30, -2],
     "44": [-30, -1],
   };
@@ -67,9 +69,12 @@
     "4": [0, -30],
   };
 
+  const SINGLE_CHAR_UNDERLINE_COLOR = "#5b21b6";
+
   global.IntervalConfig = {
     TONE_INTERVAL_RANGES,
     DEVIATION_HIGHLIGHT,
     SINGLE_CHAR_INTERVAL_RANGES,
+    SINGLE_CHAR_UNDERLINE_COLOR,
   };
 })(window);

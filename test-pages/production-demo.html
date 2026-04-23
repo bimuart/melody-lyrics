@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Melody-Lyrics 生产版原型</title>
+    <title>歌词字音&音乐旋律校对</title>
     <style>
       :root {
         --bg: #f4f6fb;
@@ -13,7 +13,6 @@
         --muted: #5f6b7a;
         --primary: #2357ff;
         --primary-hover: #1b49d6;
-        --warn: #ff9f1a;
         --ok: #0f9d58;
         --err: #d93025;
       }
@@ -42,14 +41,21 @@
       }
 
       .subtitle {
-        margin-top: 8px;
         color: var(--muted);
         font-size: 14px;
       }
 
+      .subhead-row {
+        margin-top: 8px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
       .status {
-        margin-top: 10px;
         font-size: 14px;
+        text-align: right;
       }
 
       .status.ok {
@@ -66,6 +72,20 @@
         flex-wrap: wrap;
         gap: 10px;
         align-items: center;
+      }
+
+      .top-actions {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: 340px minmax(0, 1fr);
+        gap: 12px;
+        align-items: start;
+      }
+
+      .action-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
       }
 
       button,
@@ -114,11 +134,63 @@
         gap: 12px;
       }
 
+      .content-row {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: 320px minmax(0, 1fr) minmax(0, 1fr);
+        gap: 12px;
+        align-items: start;
+      }
+
+      .melody-line-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+
+      .melody-line-prefix {
+        flex: 0 0 4.2em;
+        width: 4.2em;
+        text-align: right;
+        font-size: 12px;
+        font-weight: 300;
+        line-height: 2;
+        font-variant-numeric: tabular-nums;
+        user-select: none;
+      }
+
+      .melody-line-content {
+        flex: 1 1 auto;
+        min-width: 0;
+        line-height: 2;
+      }
+
       .card {
         border: 1px solid var(--border);
         border-radius: 12px;
         background: var(--panel);
         padding: 12px;
+      }
+
+      .panel-list {
+        margin: 0;
+        padding-left: 16px;
+        color: var(--text);
+        line-height: 1.7;
+        font-size: 13px;
+      }
+
+      .panel-item-line {
+        display: block;
+      }
+
+      .panel-match {
+        font-weight: 600;
+      }
+
+      .panel-mismatch {
+        font-weight: 600;
       }
 
       .title {
@@ -142,10 +214,6 @@
         padding: 10px;
         line-height: 1.5;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
-      }
-
-      .json textarea {
-        min-height: 280px;
       }
 
       .editor {
@@ -194,10 +262,6 @@
         background: #edf4ff;
       }
 
-      .token.invalid {
-        border-bottom-color: var(--warn);
-      }
-
       .token .small {
         color: #526071;
         font-size: 12px;
@@ -210,7 +274,16 @@
       }
 
       @media (max-width: 1100px) {
-        .grid {
+        .subhead-row {
+          flex-direction: column;
+        }
+        .status {
+          text-align: left;
+        }
+        .top-actions {
+          grid-template-columns: 1fr;
+        }
+        .content-row {
           grid-template-columns: 1fr;
         }
       }
@@ -218,67 +291,74 @@
   </head>
   <body>
     <div class="container">
-      <h1>Melody-Lyrics 生产版原型（纯 HTML/JS）</h1>
-      <div class="subtitle">输入链路计算 + 渲染链路回算 + MIDI 上传 + 单字联动高亮</div>
-      <div id="statusText" class="status"></div>
-
-      <div class="toolbar">
-        <button class="primary" id="calcBtn">计算（原始输入）</button>
-        <button class="primary" id="applyRenderBtn">应用渲染（回算）</button>
-        <button class="secondary" id="undoBtn">撤销输入</button>
+      <h1>歌词字音 & 音乐旋律校对工具</h1>
+      <div class="subhead-row">
+        <div class="subtitle">上传旋律或直接输入，实时检查每个字与旋律的匹配情况。</div>
+        <div id="statusText" class="status"></div>
       </div>
 
-      <div class="toolbar">
-        <input id="midiFileInput" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" />
-        <label class="label"
-          >每句小节数
-          <select id="barsPerSentence">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-          </select>
-        </label>
-        <label class="label"
-          >分句偏移
-          <select id="offsetFraction">
-            <option value="0.75">+0.75</option>
-            <option value="0.5">+0.5</option>
-            <option value="0.25">+0.25</option>
-            <option value="0" selected>+0</option>
-          </select>
-        </label>
-        <button class="secondary" id="parseMidiBtn">解析 MIDI 到旋律输入</button>
-        <button class="secondary" id="regroupMidiBtn">按设置重新分句</button>
+      <div class="top-actions">
+        <div class="card action-stack">
+          <button class="primary" id="calcBtn">重置编辑</button>
+          <button class="secondary" id="sampleBtn">示例</button>
+          <label class="secondary" for="midiFileInput" style="display: inline-block; cursor: pointer; width: fit-content"
+            >上传 MIDI</label
+          >
+          <input
+            id="midiFileInput"
+            type="file"
+            accept=".mid,.midi,audio/midi,audio/x-midi"
+            style="position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0"
+          />
+          <label class="label"
+            >每句小节数
+            <select id="barsPerSentence">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </label>
+        </div>
+        <div class="grid" style="margin-top: 0">
+          <div class="card">
+            <div class="title">旋律输入</div>
+            <div class="hint">可手输，也可通过 MIDI 上传自动填充。</div>
+            <textarea id="melodyInput"></textarea>
+          </div>
+          <div class="card">
+            <div class="title">歌词输入</div>
+            <div class="hint">支持多行。分词将由解析逻辑自动处理。</div>
+            <div class="toolbar" style="margin-top: 8px">
+              <button type="button" class="secondary" id="aiAnnotateBtn">AI分词</button>
+            </div>
+            <textarea id="lyricsInput"></textarea>
+          </div>
+        </div>
       </div>
 
-      <div class="grid">
+      <div class="content-row">
         <div class="card">
-          <div class="title">输入：歌词（原始输入）</div>
-          <div class="hint">支持多行。分词将由解析逻辑自动处理。</div>
-          <textarea id="lyricsInput"></textarea>
+          <div class="title">旋律校验提示</div>
+          <div class="hint">将鼠标悬停到结果区的某个字，即可查看该位置的校验结果。</div>
+          <ul id="validationPanel" class="panel-list">
+            <li>字音：</li>
+            <li>左侧：</li>
+            <li>右侧：</li>
+          </ul>
         </div>
         <div class="card">
-          <div class="title">输入：旋律（原始输入）</div>
-          <div class="hint">可手输，也可通过 MIDI 上传自动填充。</div>
-          <textarea id="melodyInput"></textarea>
+          <div class="title">旋律结果</div>
+          <div class="hint">只读展示；支持与歌词窗口悬停联动高亮。</div>
+          <div id="melodyRenderEditor" class="editor readonly" contenteditable="false" spellcheck="false">
+            <div id="melodyRenderInner"></div>
+          </div>
         </div>
-
         <div class="card">
-          <div class="title">歌词渲染（单视图：可编辑+可视化）</div>
+          <div class="title">歌词结果</div>
           <div class="hint">仅允许修改拼音、分词斜线与换行；若改动汉字序列会自动回退。</div>
           <div id="lyricsRenderEditor" class="editor" contenteditable="true" spellcheck="false"></div>
         </div>
-        <div class="card">
-          <div class="title">旋律渲染（单视图：可编辑+可视化）</div>
-          <div class="hint">只读展示；支持与歌词窗口悬停联动高亮。</div>
-          <div id="melodyRenderEditor" class="editor readonly" contenteditable="false" spellcheck="false"></div>
-        </div>
-      </div>
-
-      <div class="card json" style="margin-top: 12px">
-        <div class="title">单字音程数组 JSON</div>
-        <textarea id="jsonOutput"></textarea>
       </div>
     </div>
 
@@ -295,21 +375,17 @@
       const melodyInput = document.getElementById("melodyInput");
       const lyricsRenderEditor = document.getElementById("lyricsRenderEditor");
       const melodyRenderEditor = document.getElementById("melodyRenderEditor");
-      const jsonOutput = document.getElementById("jsonOutput");
+      const melodyRenderInner = document.getElementById("melodyRenderInner");
       const statusText = document.getElementById("statusText");
+      const validationPanel = document.getElementById("validationPanel");
 
       const calcBtn = document.getElementById("calcBtn");
-      const applyRenderBtn = document.getElementById("applyRenderBtn");
-      const undoBtn = document.getElementById("undoBtn");
+      const sampleBtn = document.getElementById("sampleBtn");
+      const aiAnnotateBtn = document.getElementById("aiAnnotateBtn");
 
       const midiFileInput = document.getElementById("midiFileInput");
-      const parseMidiBtn = document.getElementById("parseMidiBtn");
-      const regroupMidiBtn = document.getElementById("regroupMidiBtn");
       const barsPerSentenceSelect = document.getElementById("barsPerSentence");
-      const offsetFractionSelect = document.getElementById("offsetFraction");
 
-      const undoStack = [];
-      let inputDirty = false;
       let currentSingleCharArray = [];
       let currentParsedMidi = null;
       let currentTemplateNotes = [];
@@ -318,57 +394,292 @@
       let lastValidMelodyRenderText = "";
       let autoCalcTimer = null;
       let autoApplyTimer = null;
+      let hoverInfoMap = {};
+      let pinnedValidationKey = null;
+      let demoCaseIndex = -1;
+      const DEMO_CASE_FILES = [
+        "../demo-cases/case-01.md",
+        "../demo-cases/case-02.md",
+        "../demo-cases/case-03.md",
+        "../demo-cases/case-04.md",
+      ];
+      const LYRICS_ANNOTATE_API_URL = "http://127.0.0.1:8000/api/lyrics/annotate";
+
+      const DEMO_CASE_FALLBACK = [
+        {
+          title: "送别片段",
+          lyrics: [
+            "长亭外 古道边",
+            "芳草 碧 连天",
+            "晚风 拂柳 笛声残",
+            "夕阳 山外山",
+            "天之涯 地之角",
+            "知交 半零落",
+            "一壶 浊酒 尽余欢",
+            "今宵 别梦 寒",
+          ].join("\n"),
+          melody: [
+            "G3 E3-G3 C4 A3 C4 G3",
+            "G3 C3-D3 E3 D3-C3 D3",
+            "G3 E3-G3 C4 B3 A3 C4 G3",
+            "G3 D3-E3 F3 B2 C3",
+            "A3 C4 C4 B3 A3-B3 C4",
+            "A3-B3 C4-A3 A3-G3 E3-C3 D3",
+            "G3 E3-G3 C4 B3 A3 C4 G3",
+            "G3 D3-E3 F3 B2 C3",
+          ].join("\n"),
+        },
+        {
+          title: "江南春色",
+          lyrics: [
+            "还 记得 年少时的 梦吗",
+            "像朵 永远 不凋零的 花",
+            "陪我 经过 那 风吹 雨打",
+            "看 世事 无常",
+            "看 沧桑 变化",
+            "那些 为爱 所付出的 代价",
+            "是 永远 都难忘的啊",
+            "所有 真心的 痴心的 话",
+            "永在 我心中 虽然 已没有 她",
+          ].join("\n"),
+          melody: [
+            "C3 C3 D3 E3 G3 G3 G3 E3 G3",
+            "A3 B3 C4 C4 C4 C4 B3 E3 G3",
+            "A3 B3 C4 C4 C4 C4 B3 A3 G3",
+            "G3 E3 D3 C3 D3",
+            "D3 C3 C3 E3 D3",
+            "E3 G3 C3 C3 C3 C3 C3 D3 E3 G3",
+            "A3 B3 C4 C4 C4 B3 A3 G3",
+            "A3 B3 C4 C4 C4 C4 B3 A3 G3",
+            "G3 E3 D3 C3 D3 D3 E3 A2 A2 C3 C3",
+          ].join("\n"),
+        },
+        {
+          title: "思乡短句",
+          lyrics: [
+            "你问 我爱你 有多深",
+            "我爱你 有几分",
+            "我的情 也 真",
+            "我的爱 也 真",
+            "月亮 代表 我的心",
+            "你问 我爱你 有多深",
+            "我爱你 有几分",
+            "我的情 不移",
+            "我的爱 不变",
+            "月亮 代表 我的心",
+          ].join("\n"),
+          melody: [
+            "G2 C3 E3 G3 C3 B2 E3 G3",
+            "G3 A3 B3 C4 A3 G3",
+            "E3 D3 C3 C3 C3",
+            "E3 D3 C3 C3 C3",
+            "D3 E3 D3 C3 A2 D3-E3 D3",
+            "G2 C3 E3 G3 C3 B2 E3 G3",
+            "G3 A3 B3 C4 A3 G3",
+            "E3 D3 C3 C3 C3",
+            "E3 D3 C3 C3 C3",
+            "D3 E3 D3 A2 B2 C3-D3 C3",
+          ].join("\n"),
+        },
+        {
+          title: "春晓片段",
+          lyrics: [
+            "轻轻 敲醒 沉睡的 心灵",
+            "慢慢 张开 你的 眼睛",
+            "看看 忙碌的 世界",
+            "是否 依然 孤独地 转个 不停",
+            "春风 不解 风情",
+            "吹动 少年的 心",
+            "让 昨日 脸上的 泪痕",
+            "随记忆 风干了",
+          ].join("\n"),
+          melody: [
+            "E3 F3 G3 G3 G3 G3 G3 A3-G3 F3",
+            "E3 F3 G3 G3 E3 D3 C3 D3",
+            "E3 D3 C3 C3 C3 C4 C4 B3 C4 B3 G3",
+            "A3 G3 F3 F3 G3 A3-G3 G3",
+            "C3 C3 A3 E3 G3-A3 G3",
+            "A3 A3 G3 C3 D3 E3",
+            "D3 C3 C3 C3 E3 E3 E3 D3",
+            "D3 D4 D4 A3-B3 A3-G3 G3",
+          ].join("\n"),
+        },
+      ];
 
       function setStatus(text, isError) {
         statusText.className = "status " + (isError ? "err" : "ok");
         statusText.textContent = text;
       }
 
-      function pushInputVersion(source) {
-        const last = undoStack.length > 0 ? undoStack[undoStack.length - 1] : null;
-        const curr = {
-          lyricsText: lyricsInput.value,
-          melodyText: melodyInput.value,
-          source: source || "manual",
-          at: Date.now(),
-        };
-        if (last && last.lyricsText === curr.lyricsText && last.melodyText === curr.melodyText) return;
-        undoStack.push(curr);
-        undoBtn.disabled = undoStack.length <= 1;
+      function extractAnnotateResult(payload) {
+        if (!payload || typeof payload !== "object") return null;
+        const inner = payload.data;
+        if (inner && typeof inner === "object" && "result" in inner) return inner.result;
+        return null;
       }
 
-      function markInputDirty() {
-        inputDirty = true;
-      }
-
-      function maybeSnapshotInput(source) {
-        if (!inputDirty) return;
-        pushInputVersion(source);
-        inputDirty = false;
-      }
-
-      function popUndoVersion() {
-        if (undoStack.length <= 1) {
-          setStatus("没有可撤销的输入版本。", true);
+      async function requestAiLyricsAnnotate() {
+        const text = String(lyricsInput.value || "").trim();
+        if (!text) {
+          setStatus("请先填写歌词输入。", true);
           return;
         }
-        undoStack.pop();
-        const prev = undoStack[undoStack.length - 1];
-        lyricsInput.value = prev.lyricsText;
-        melodyInput.value = prev.melodyText;
-        inputDirty = false;
-        undoBtn.disabled = undoStack.length <= 1;
-        setStatus("已撤销到上一个输入版本。", false);
+        aiAnnotateBtn.disabled = true;
+        setStatus("AI分词请求中…", false);
+        try {
+          const resp = await fetch(LYRICS_ANNOTATE_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+          });
+          let payload = null;
+          try {
+            payload = await resp.json();
+          } catch (_e) {
+            payload = null;
+          }
+          if (!resp.ok) {
+            const msg =
+              (payload && (payload.message || payload.msg || payload.error)) || resp.statusText || "请求失败";
+            throw new Error(String(msg));
+          }
+          const raw = extractAnnotateResult(payload);
+          if (raw === null || raw === undefined) {
+            throw new Error("响应中缺少 data.result");
+          }
+          let out = raw;
+          if (typeof out !== "string") {
+            if (typeof out === "number" && Number.isFinite(out)) out = String(out);
+            else throw new Error("data.result 应为字符串");
+          }
+          lyricsInput.value = out;
+          scheduleAutoCalc();
+          setStatus("AI分词已写入歌词输入。", false);
+        } catch (err) {
+          setStatus("AI分词失败：" + (err && err.message ? err.message : String(err)), true);
+        } finally {
+          aiAnnotateBtn.disabled = false;
+        }
       }
 
       function getDeviationColorClass(deviations) {
         const cfg = window.IntervalConfig && window.IntervalConfig.DEVIATION_HIGHLIGHT;
         if (!cfg || !Array.isArray(deviations)) return null;
-        const nonZero = deviations.filter((n) => Number(n) !== 0).map((n) => Math.abs(Number(n)));
-        if (nonZero.length === 0) return null;
-        const maxAbs = Math.max.apply(null, nonZero);
+        const nums = deviations.map((n) => Number(n)).filter((n) => Number.isFinite(n));
+        if (nums.length === 0) return null;
+        // New rule: fail only when all elements are non-zero.
+        if (!nums.every((n) => n !== 0)) return null;
+        const absValues = nums.map((n) => Math.abs(n));
+        const maxAbs = Math.max.apply(null, absValues);
         if (maxAbs <= Number(cfg.lowMax || 2)) return cfg.colors.low;
         return cfg.colors.high;
+      }
+
+      function getInvalidUnderlineColor() {
+        return (window.IntervalConfig && window.IntervalConfig.SINGLE_CHAR_UNDERLINE_COLOR) || "#5b21b6";
+      }
+
+      function isDeviationFailed(deviations) {
+        const nums = Array.isArray(deviations) ? deviations.map((n) => Number(n)).filter((n) => Number.isFinite(n)) : [];
+        if (nums.length === 0) return false;
+        return nums.every((n) => n !== 0);
+      }
+
+      function getMatchTextColor() {
+        const cfg = window.IntervalConfig && window.IntervalConfig.DEVIATION_HIGHLIGHT;
+        return (cfg && cfg.colors && cfg.colors.zero) || "#8fd19e";
+      }
+
+      function getMismatchTextColor() {
+        const cfg = window.IntervalConfig && window.IntervalConfig.DEVIATION_HIGHLIGHT;
+        return (cfg && cfg.colors && cfg.colors.high) || "#ff6b6b";
+      }
+
+      function getToneRange(prevTone, nextTone) {
+        const cfg = window.IntervalConfig && window.IntervalConfig.TONE_INTERVAL_RANGES;
+        if (!cfg) return null;
+        const key = String(Number(prevTone) || 0) + String(Number(nextTone) || 0);
+        return Array.isArray(cfg[key]) && cfg[key].length === 2 ? cfg[key] : null;
+      }
+
+      function formatSemitoneRange(range) {
+        if (!Array.isArray(range) || range.length !== 2) return "无建议区间";
+        const a = Number(range[0]);
+        const b = Number(range[1]);
+        const low = Math.min(a, b);
+        const high = Math.max(a, b);
+        if (low === -30 && high === 30) return "任意半音";
+        if (low === -30) return high + " 个半音及以下";
+        if (high === 30) return low + " 个半音及以上";
+        return low + " ~ " + high + " 个半音";
+      }
+
+      function buildIntervalPairs(nextNotes, prevNotes) {
+        const next = Array.isArray(nextNotes) ? nextNotes : [];
+        const prev = Array.isArray(prevNotes) ? prevNotes : [];
+        const pairs = [];
+        next.forEach((n2) => {
+          prev.forEach((n1) => {
+            pairs.push(String(n2) + " ~ " + String(n1));
+          });
+        });
+        return pairs;
+      }
+
+      function formatActualIntervals(intervals, pairs) {
+        const arr = Array.isArray(intervals) ? intervals : [];
+        if (!arr.length) return "无";
+        const valueText = arr.join("或");
+        const pairArr = Array.isArray(pairs) ? pairs.filter(Boolean) : [];
+        if (!pairArr.length) return valueText;
+        return valueText + "（" + pairArr.join(" / ") + "）";
+      }
+
+      function setValidationPanelContent(lines) {
+        const list = Array.isArray(lines) && lines.length ? lines : [];
+        validationPanel.innerHTML = "";
+        list.forEach((line) => {
+          const li = document.createElement("li");
+          if (line && typeof line === "object" && !Array.isArray(line)) {
+            const header = document.createElement("span");
+            header.className = "panel-item-line";
+            header.textContent = String(line.title || "");
+            if (line.status) {
+              const status = document.createElement("span");
+              status.textContent = String(line.status);
+              if (line.status === "匹配") {
+                status.classList.add("panel-match");
+                status.style.color = getMatchTextColor();
+              } else if (line.status === "不匹配") {
+                status.classList.add("panel-mismatch");
+                status.style.color = getMismatchTextColor();
+              }
+              header.appendChild(status);
+            }
+            li.appendChild(header);
+
+            const details = Array.isArray(line.details) ? line.details : [];
+            details.forEach((d) => {
+              const detail = document.createElement("span");
+              detail.className = "panel-item-line";
+              detail.textContent = String(d || "");
+              li.appendChild(detail);
+            });
+          } else {
+            const segs = Array.isArray(line) ? line : [line];
+            segs.forEach((seg) => {
+              const span = document.createElement("span");
+              span.className = "panel-item-line";
+              span.textContent = String(seg || "");
+              li.appendChild(span);
+            });
+          }
+          validationPanel.appendChild(li);
+        });
+      }
+
+      function resetValidationPanel() {
+        setValidationPanelContent([{ title: "字音：" }, { title: "左侧：" }, { title: "右侧：" }]);
       }
 
       function escapeHtml(text) {
@@ -396,6 +707,51 @@
         const src = String(text || "");
         return src.replace(/([\u4e00-\u9fa5])\s*([a-zA-ZvV\u00fc\u00dc]+[0-4]?)/g, function (_m, ch, py) {
           return ch + "(" + py + ")";
+        });
+      }
+
+      function parseDemoCaseMarkdown(mdText) {
+        const text = String(mdText || "");
+        const titleMatch = text.match(/^#\s+(.+)$/m);
+        const lyricsMatch = text.match(/##\s*歌词[\s\S]*?```(?:text)?\s*([\s\S]*?)```/i);
+        const melodyMatch = text.match(/##\s*旋律[\s\S]*?```(?:text)?\s*([\s\S]*?)```/i);
+        return {
+          title: titleMatch ? titleMatch[1].trim() : "示例",
+          lyrics: lyricsMatch ? lyricsMatch[1].trim() : "",
+          melody: melodyMatch ? melodyMatch[1].trim() : "",
+        };
+      }
+
+      async function loadDemoCase(casePath, fallbackCase) {
+        let parsed = null;
+        let usedFallback = false;
+        try {
+          const resp = await fetch(casePath);
+          if (!resp.ok) throw new Error("读取示例失败：" + casePath);
+          const md = await resp.text();
+          parsed = parseDemoCaseMarkdown(md);
+          if (!parsed.lyrics || !parsed.melody) {
+            throw new Error("示例格式错误，需包含“歌词/旋律”代码块。");
+          }
+        } catch (_err) {
+          parsed = fallbackCase || null;
+          usedFallback = true;
+        }
+
+        if (!parsed || !parsed.lyrics || !parsed.melody) {
+          throw new Error("加载示例失败：无可用示例数据。");
+        }
+
+        lyricsInput.value = parsed.lyrics;
+        melodyInput.value = parsed.melody;
+        calcFromRawInputs();
+        setStatus((usedFallback ? "已加载内置示例：" : "已加载示例：") + parsed.title, false);
+      }
+
+      function nextDemoCase() {
+        demoCaseIndex = (demoCaseIndex + 1) % DEMO_CASE_FILES.length;
+        loadDemoCase(DEMO_CASE_FILES[demoCaseIndex], DEMO_CASE_FALLBACK[demoCaseIndex]).catch((err) => {
+          setStatus("加载示例失败：" + (err && err.message ? err.message : String(err)), true);
         });
       }
 
@@ -427,23 +783,106 @@
       }
 
       function setMelodyEditorText(text) {
-        melodyRenderEditor.textContent = compactSlashSpacing(String(text || ""));
+        if (melodyRenderInner) {
+          melodyRenderInner.textContent = compactSlashSpacing(String(text || ""));
+        } else {
+          melodyRenderEditor.textContent = compactSlashSpacing(String(text || ""));
+        }
       }
 
       function getMelodyEditorText() {
-        return normalizeEditorText(melodyRenderEditor.innerText || melodyRenderEditor.textContent || "");
+        const src = melodyRenderInner
+          ? melodyRenderInner.innerText || melodyRenderInner.textContent || ""
+          : melodyRenderEditor.innerText || melodyRenderEditor.textContent || "";
+        return normalizeEditorText(src);
+      }
+
+      function countCharsInLine(line) {
+        let n = 0;
+        (Array.isArray(line) ? line : []).forEach((segment) => {
+          n += (Array.isArray(segment) ? segment : []).length;
+        });
+        return n;
+      }
+
+      function getPrevItemInLine(line, segIdx, itemIdx) {
+        const segs = Array.isArray(line) ? line : [];
+        if (itemIdx > 0) {
+          const seg = Array.isArray(segs[segIdx]) ? segs[segIdx] : [];
+          return seg[itemIdx - 1] || null;
+        }
+        for (let s = segIdx - 1; s >= 0; s -= 1) {
+          const seg = Array.isArray(segs[s]) ? segs[s] : [];
+          if (seg.length > 0) return seg[seg.length - 1];
+        }
+        return null;
+      }
+
+      function getNextItemInLine(line, segIdx, itemIdx) {
+        const segs = Array.isArray(line) ? line : [];
+        const seg = Array.isArray(segs[segIdx]) ? segs[segIdx] : [];
+        if (itemIdx < seg.length - 1) return seg[itemIdx + 1] || null;
+        for (let s = segIdx + 1; s < segs.length; s += 1) {
+          const nextSeg = Array.isArray(segs[s]) ? segs[s] : [];
+          if (nextSeg.length > 0) return nextSeg[0];
+        }
+        return null;
+      }
+
+      function linePenalty(line) {
+        let penalty = 0;
+        const segs = Array.isArray(line) ? line : [];
+        segs.forEach((segment, segIdx) => {
+          const seg = Array.isArray(segment) ? segment : [];
+          seg.forEach((item, itemIdx) => {
+            const singleValid = Number(item[4]) === 1;
+            if (!singleValid) penalty += 1;
+            const leftDeviations = item[5] && Array.isArray(item[5][1]) ? item[5][1] : [];
+            if (getPrevItemInLine(line, segIdx, itemIdx) && isDeviationFailed(leftDeviations)) penalty += 0.5;
+            const rightDeviations = item[6] && Array.isArray(item[6][1]) ? item[6][1] : [];
+            if (getNextItemInLine(line, segIdx, itemIdx) && isDeviationFailed(rightDeviations)) penalty += 0.5;
+          });
+        });
+        return penalty;
+      }
+
+      function computeLineMatchPercent(line) {
+        const total = countCharsInLine(line);
+        if (total <= 0) return null;
+        const penalty = linePenalty(line);
+        const ratio = Math.min(penalty / total, 1);
+        return (1 - ratio) * 100;
       }
 
       function renderPreview() {
         const lines = Array.isArray(currentSingleCharArray) ? currentSingleCharArray : [];
         lyricsRenderEditor.innerHTML = "";
-        melodyRenderEditor.innerHTML = "";
+        if (melodyRenderInner) {
+          melodyRenderInner.innerHTML = "";
+        } else {
+          melodyRenderEditor.innerHTML = "";
+        }
+        hoverInfoMap = {};
 
         lines.forEach((line, li) => {
           const lyricLine = document.createElement("div");
           lyricLine.className = "line";
-          const melodyLine = document.createElement("div");
-          melodyLine.className = "line";
+          const melodyRow = document.createElement("div");
+          melodyRow.className = "melody-line-row";
+
+          const melodyPrefix = document.createElement("div");
+          melodyPrefix.className = "melody-line-prefix";
+          const passColor = getMatchTextColor();
+          melodyPrefix.style.color = passColor;
+          const pct = computeLineMatchPercent(line);
+          if (pct === null) melodyPrefix.textContent = "—";
+          else {
+            const rounded = Math.round(pct * 10) / 10;
+            melodyPrefix.textContent = rounded + "%";
+          }
+
+          const melodyContent = document.createElement("div");
+          melodyContent.className = "melody-line-content";
 
           (Array.isArray(line) ? line : []).forEach((segment, si) => {
             const lyricSeg = document.createElement("span");
@@ -459,7 +898,9 @@
               const notes = Array.isArray(item[3]) ? item[3] : [];
               const singleValid = Number(item[4]) === 1;
               const leftDeviations = item[5] && Array.isArray(item[5][1]) ? item[5][1] : [];
+              const leftIntervals = item[5] && Array.isArray(item[5][0]) ? item[5][0] : [];
               const rightDeviations = item[6] && Array.isArray(item[6][1]) ? item[6][1] : [];
+              const rightIntervals = item[6] && Array.isArray(item[6][0]) ? item[6][0] : [];
 
               const leftColor = getDeviationColorClass(leftDeviations);
               const rightColor = getDeviationColorClass(rightDeviations);
@@ -468,6 +909,7 @@
               lyricToken.className = "token" + (singleValid ? "" : " invalid");
               lyricToken.dataset.key = key;
               lyricToken.innerHTML = escapeHtml(char) + '<span class="small">' + escapeHtml(py + tone) + "</span>";
+              if (!singleValid) lyricToken.style.borderBottomColor = getInvalidUnderlineColor();
 
               if (leftColor || rightColor) {
                 const bg = "linear-gradient(to right, " +
@@ -486,6 +928,7 @@
               melodyToken.className = "token" + (singleValid ? "" : " invalid");
               melodyToken.dataset.key = key;
               melodyToken.textContent = notes.join("-");
+              if (!singleValid) melodyToken.style.borderBottomColor = getInvalidUnderlineColor();
 
               if (leftColor || rightColor) {
                 const bg = "linear-gradient(to right, " +
@@ -504,6 +947,31 @@
               melodySeg.appendChild(melodyToken);
 
               const segArr = Array.isArray(segment) ? segment : [];
+              const leftItem = ii > 0 ? segArr[ii - 1] : null;
+              const rightItem = ii < segArr.length - 1 ? segArr[ii + 1] : null;
+              hoverInfoMap[key] = {
+                char,
+                tone,
+                notes,
+                singleValid,
+                left: {
+                  char: leftItem ? leftItem[0] || "" : "",
+                  tone: leftItem ? Number(leftItem[2]) || 0 : 0,
+                  notes: leftItem && Array.isArray(leftItem[3]) ? leftItem[3] : [],
+                  range: leftItem ? getToneRange(Number(leftItem[2]) || 0, tone) : null,
+                  intervals: leftIntervals,
+                  deviations: leftDeviations,
+                },
+                right: {
+                  char: rightItem ? rightItem[0] || "" : "",
+                  tone: rightItem ? Number(rightItem[2]) || 0 : 0,
+                  notes: rightItem && Array.isArray(rightItem[3]) ? rightItem[3] : [],
+                  range: rightItem ? getToneRange(tone, Number(rightItem[2]) || 0) : null,
+                  intervals: rightIntervals,
+                  deviations: rightDeviations,
+                },
+              };
+
               if (ii < segArr.length - 1) {
                 const lyricGap = document.createElement("span");
                 lyricGap.className = "gap";
@@ -530,11 +998,17 @@
             }
 
             lyricLine.appendChild(lyricSeg);
-            melodyLine.appendChild(melodySeg);
+            melodyContent.appendChild(melodySeg);
           });
 
           lyricsRenderEditor.appendChild(lyricLine);
-          melodyRenderEditor.appendChild(melodyLine);
+          melodyRow.appendChild(melodyPrefix);
+          melodyRow.appendChild(melodyContent);
+          if (melodyRenderInner) {
+            melodyRenderInner.appendChild(melodyRow);
+          } else {
+            melodyRenderEditor.appendChild(melodyRow);
+          }
         });
       }
 
@@ -543,37 +1017,109 @@
           document.querySelectorAll(".token.hover").forEach((n) => n.classList.remove("hover"));
         }
 
+        function renderHoverValidation(key) {
+          const info = hoverInfoMap[key];
+          if (!info) {
+            resetValidationPanel();
+            return;
+          }
+          const toneText = String(info.tone || 0);
+          const noteText = (Array.isArray(info.notes) ? info.notes : []).join("-") || "无";
+          const singleLine =
+            Number(info.singleValid) === 1
+              ? { title: "字音：", status: "匹配", details: [] }
+              : {
+                  title: "字音：",
+                  status: "不匹配",
+                  details: ["“" + toneText + "”音调与“" + noteText + "”旋律反方向"],
+                };
+
+          let leftLine = { title: "左侧：", status: "匹配", details: [] };
+          if (info.left && info.left.char) {
+            const ab = String(info.left.tone || 0) + "、" + String(info.tone || 0);
+            const leftMismatch = isDeviationFailed(info.left.deviations);
+            leftLine = {
+              title: "左侧：",
+              status: leftMismatch ? "不匹配" : "匹配",
+              details: [
+                "“" + info.left.char + info.char + "” 声调：“" + ab + "”",
+                "建议音程：" + formatSemitoneRange(info.left.range),
+                "现为：" + formatActualIntervals(info.left.intervals, buildIntervalPairs(info.notes, info.left.notes)),
+              ],
+            };
+          }
+
+          let rightLine = { title: "右侧：", status: "匹配", details: [] };
+          if (info.right && info.right.char) {
+            const ab = String(info.tone || 0) + "、" + String(info.right.tone || 0);
+            const rightMismatch = isDeviationFailed(info.right.deviations);
+            rightLine = {
+              title: "右侧：",
+              status: rightMismatch ? "不匹配" : "匹配",
+              details: [
+                "“" + info.char + info.right.char + "” 声调：“" + ab + "”",
+                "建议音程：" + formatSemitoneRange(info.right.range),
+                "现为：" + formatActualIntervals(info.right.intervals, buildIntervalPairs(info.right.notes, info.notes)),
+              ],
+            };
+          }
+
+          setValidationPanelContent([singleLine, leftLine, rightLine]);
+        }
+
         function onEnter(ev) {
           const target = ev.target && ev.target.closest ? ev.target.closest(".token") : null;
           if (!target) return;
           const key = target.dataset.key;
+          if (pinnedValidationKey) return;
           clearHover();
           document.querySelectorAll('.token[data-key="' + key + '"]').forEach((n) => n.classList.add("hover"));
+          renderHoverValidation(key);
+        }
+
+        function onClick(ev) {
+          if (pinnedValidationKey) {
+            pinnedValidationKey = null;
+            clearHover();
+            resetValidationPanel();
+            return;
+          }
+          const target = ev.target && ev.target.closest ? ev.target.closest(".token") : null;
+          if (!target) return;
+          const key = target.dataset.key;
+          pinnedValidationKey = key;
+          clearHover();
+          document.querySelectorAll('.token[data-key="' + key + '"]').forEach((n) => n.classList.add("hover"));
+          renderHoverValidation(key);
         }
 
         function onLeave() {
+          if (pinnedValidationKey) return;
           clearHover();
+          resetValidationPanel();
         }
 
         lyricsRenderEditor.addEventListener("mouseover", onEnter);
         melodyRenderEditor.addEventListener("mouseover", onEnter);
+        lyricsRenderEditor.addEventListener("click", onClick);
+        melodyRenderEditor.addEventListener("click", onClick);
         lyricsRenderEditor.addEventListener("mouseleave", onLeave);
         melodyRenderEditor.addEventListener("mouseleave", onLeave);
       }
 
       function renderBySingleCharArray(arr) {
         currentSingleCharArray = Array.isArray(arr) ? arr : [];
+        pinnedValidationKey = null;
+        resetValidationPanel();
         lastValidLyricsRenderText = window.Json2Window.singleCharToRenderLyrics(currentSingleCharArray);
         setLyricsEditorText(lastValidLyricsRenderText);
         lastValidMelodyRenderText = window.Json2Window.singleCharToRenderMelody(currentSingleCharArray);
         setMelodyEditorText(lastValidMelodyRenderText);
-        jsonOutput.value = JSON.stringify(currentSingleCharArray, null, 2);
         renderPreview();
       }
 
       function calcFromRawInputs() {
         try {
-          maybeSnapshotInput("before-calc");
           const arr = window.Compute.buildSingleCharIntervalArrayFromText(lyricsInput.value, melodyInput.value);
           renderBySingleCharArray(arr);
           setStatus("计算成功（原始输入链路）。", false);
@@ -582,9 +1128,7 @@
         }
       }
 
-      function applyFromRenderPanels(options) {
-        const opts = options || {};
-        const recordVersion = opts.recordVersion !== false;
+      function applyFromRenderPanels() {
         try {
           const lyricsRenderText = getLyricsEditorText();
           // Requirement: melody source for re-compute should come from input panel,
@@ -596,9 +1140,6 @@
           lastValidMelodyRenderText = melodyRenderText;
           lyricsInput.value = window.Json2Window.singleCharToParsedLyrics(arr);
           melodyInput.value = window.Json2Window.singleCharToParsedMelody(arr);
-          if (recordVersion) pushInputVersion("apply-render");
-          inputDirty = false;
-          jsonOutput.value = JSON.stringify(arr, null, 2);
           renderPreview();
           setStatus("应用渲染成功（渲染链路回算）。", false);
         } catch (err) {
@@ -622,11 +1163,10 @@
             bpm: currentTimingInfo.bpm,
             beatsPerBar: currentTimingInfo.beatsPerBar,
             barsPerSentence: Number(barsPerSentenceSelect.value),
-            offsetFraction: Number(offsetFractionSelect.value),
+            offsetFraction: 0,
           });
+          scheduleAutoApply();
 
-          markInputDirty();
-          maybeSnapshotInput("midi-parse");
           setStatus(
             "MIDI 解析成功：" +
               file.name +
@@ -653,24 +1193,19 @@
             bpm: currentTimingInfo.bpm,
             beatsPerBar: currentTimingInfo.beatsPerBar,
             barsPerSentence: Number(barsPerSentenceSelect.value),
-            offsetFraction: Number(offsetFractionSelect.value),
+            offsetFraction: 0,
           });
-          markInputDirty();
-          maybeSnapshotInput("midi-regroup");
-          setStatus("已按当前小节和偏移设置重新分句。", false);
+          scheduleAutoApply();
+          setStatus("已按当前每句小节数重新分句。", false);
         } catch (err) {
           setStatus("重新分句失败：" + (err && err.message ? err.message : String(err)), true);
         }
       }
 
       function init() {
-        lyricsInput.value = ["长亭外 古道边", "芳草碧连天"].join("\n");
-        melodyInput.value = ["G3 E3-G3 C4 A3 C4 G3", "G3 C3-D3 E3 D3-C3 D3"].join("\n");
-
-        pushInputVersion("initial");
-        undoBtn.disabled = true;
         bindHoverSync();
-        calcFromRawInputs();
+        resetValidationPanel();
+        nextDemoCase();
       }
 
       function onLyricsEditorInput() {
@@ -697,24 +1232,34 @@
       function scheduleAutoApply() {
         if (autoApplyTimer) clearTimeout(autoApplyTimer);
         autoApplyTimer = setTimeout(function () {
-          applyFromRenderPanels({ recordVersion: false });
+          applyFromRenderPanels();
         }, 180);
       }
 
       lyricsInput.addEventListener("input", function () {
-        markInputDirty();
         scheduleAutoCalc();
       });
-      melodyInput.addEventListener("input", function () {
-        markInputDirty();
+      melodyInput.addEventListener("blur", function () {
         scheduleAutoApply();
       });
 
       calcBtn.addEventListener("click", calcFromRawInputs);
-      applyRenderBtn.addEventListener("click", applyFromRenderPanels);
-      undoBtn.addEventListener("click", popUndoVersion);
-      parseMidiBtn.addEventListener("click", parseMidiToMelodyInput);
-      regroupMidiBtn.addEventListener("click", regroupMidiToMelodyInput);
+      sampleBtn.addEventListener("click", nextDemoCase);
+      aiAnnotateBtn.addEventListener("click", function () {
+        requestAiLyricsAnnotate();
+      });
+      midiFileInput.addEventListener("change", function () {
+        if (!midiFileInput.files || !midiFileInput.files[0]) return;
+        if (
+          melodyInput.value &&
+          !window.confirm("上传 MIDI 后将覆盖当前旋律输入，是否继续？")
+        ) {
+          midiFileInput.value = "";
+          return;
+        }
+        parseMidiToMelodyInput();
+      });
+      barsPerSentenceSelect.addEventListener("change", regroupMidiToMelodyInput);
       lyricsRenderEditor.addEventListener("input", onLyricsEditorInput);
 
       init();
