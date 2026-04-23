@@ -1,8 +1,11 @@
 /**
- * 将歌词解析为三维数组：
- * 1) 最外层：按换行拆分为句子
- * 2) 次外层：按标点拆分为分词片段
- * 3) 最内层：每个字对应 [单字, 拼音, 声调]
+ * LyricsParser 对外方法说明（挂载在 window.LyricsParser / window.LyricParser）：
+ * - parseLyricsTo3DArray(lyricsText)
+ *   将歌词原文解析成三维数组：[句子][分词][字信息]，字信息结构为 [字, 拼音, 声调]。
+ * - formatMiddleLayer(parsed3D)
+ *   将歌词三维数组转为中间层字符串数组（每句一行，分词用 "/" 连接）。
+ * - parseMiddleLayerTo3DArray(middleText)
+ *   将中间层文本（如 "你(ni3)好(hao3) / 世(shi4)界(jie4)"）解析回三维数组。
  */
 (function attachLyricsParser(global) {
   "use strict";

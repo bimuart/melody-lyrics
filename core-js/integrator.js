@@ -1,3 +1,13 @@
+/**
+ * Integrator 对外方法说明（挂载在 window.Integrator）：
+ * - integrateLyricsMelody3D(lyrics3D, melody3D)
+ *   按句与字位置将音名三维数组合并到歌词三维数组中，输出“新整合数组”。
+ *   规则：
+ *   1) 句数不一致时返回 ok=false 与错误信息；
+ *   2) 句内音名更多时，超出部分并入该句最后一个字；
+ *   3) 句内音名更少时，优先填充前面的字；
+ *   4) 合并后每个字项结构为 [字, 拼音, 声调, 音名数组, 单字校验(1/0)]。
+ */
 (function attachIntegrator(global) {
   "use strict";
 
@@ -73,6 +83,19 @@
         }
       }
       // Melody fewer than lyric: earlier lyrics already filled first.
+    }
+
+    // 单字校验：将结果写入每个字项的第 5 位（1/0）
+    if (global.Compute && typeof global.Compute.validateSingleChar === "function") {
+      integrated.forEach((line) => {
+        line.forEach((segment) => {
+          segment.forEach((item) => {
+            const tone = Number(item[2]) || 0;
+            const notes = Array.isArray(item[3]) ? item[3] : [];
+            item[4] = global.Compute.validateSingleChar(tone, notes);
+          });
+        });
+      });
     }
 
     return {

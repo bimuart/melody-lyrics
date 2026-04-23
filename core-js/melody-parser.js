@@ -1,4 +1,16 @@
 /* global Tone */
+/**
+ * MelodyParser 对外方法说明（挂载在 window.MelodyParser / window.MidiParser）：
+ * - sentenceTextTo3DArray(text): 将音名文本解析为三维数组。
+ * - parseMidiArrayBuffer(arrayBuffer): 解析 MIDI 二进制为结构化对象。
+ * - flattenNotes(parsed): 将多轨音符展平并按时间排序。
+ * - getTimingInfo(parsed): 提取 bpm、拍号与每小节拍数。
+ * - notesToSentenceText(notes, options): 按小节与偏移将音名按句输出为文本。
+ * - sentenceTextToNotes(text, templateNotes): 将音名句子文本反解为音符对象（保留模板时值）。
+ * - buildMidiFromNotes(noteRows, options): 从音符对象构建可导出 MIDI。
+ * - playNotes(noteRows) / stopPlayback(): 浏览器内播放与停止。
+ * - midiToNoteName(midi) / noteNameToMidi(name): MIDI 编号与音名互转。
+ */
 (function attachMelodyParser(global) {
   "use strict";
 

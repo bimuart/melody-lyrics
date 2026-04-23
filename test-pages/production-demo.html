@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Melody-Lyrics 生产版原型</title>
+    <style>
+      :root {
+        --bg: #f4f6fb;
+        --panel: #ffffff;
+        --border: #d8deea;
+        --text: #1f2a37;
+        --muted: #5f6b7a;
+        --primary: #2357ff;
+        --primary-hover: #1b49d6;
+        --warn: #ff9f1a;
+        --ok: #0f9d58;
+        --err: #d93025;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei",
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 1500px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 24px;
+      }
+
+      .subtitle {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .status {
+        margin-top: 10px;
+        font-size: 14px;
+      }
+
+      .status.ok {
+        color: var(--ok);
+      }
+
+      .status.err {
+        color: var(--err);
+      }
+
+      .toolbar {
+        margin-top: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      button,
+      select,
+      input[type="file"] {
+        font-size: 14px;
+      }
+
+      button {
+        border: none;
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+
+      .primary {
+        background: var(--primary);
+        color: #fff;
+      }
+
+      .primary:hover {
+        background: var(--primary-hover);
+      }
+
+      .secondary {
+        background: #e8edf8;
+        color: #1f2a37;
+      }
+
+      .secondary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .label {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        color: var(--muted);
+      }
+
+      .grid {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--panel);
+        padding: 12px;
+      }
+
+      .title {
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+
+      .hint {
+        margin-top: -2px;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 190px;
+        resize: vertical;
+        border: 1px solid #cbd4e2;
+        border-radius: 8px;
+        padding: 10px;
+        line-height: 1.5;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      }
+
+      .json textarea {
+        min-height: 280px;
+      }
+
+      .editor {
+        width: 100%;
+        min-height: 190px;
+        border: 1px solid #cbd4e2;
+        border-radius: 8px;
+        padding: 10px;
+        line-height: 1.5;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+        white-space: pre-wrap;
+        overflow: auto;
+        background: #fff;
+      }
+
+      .editor:focus {
+        outline: 2px solid #b9ccff;
+        outline-offset: 1px;
+      }
+
+      .editor.readonly {
+        background: #f7f9ff;
+      }
+
+      .line {
+        margin-bottom: 6px;
+      }
+
+      .segment {
+        display: inline-block;
+        margin-right: 8px;
+      }
+
+      .token {
+        display: inline-block;
+        position: relative;
+        margin-right: 2px;
+        padding: 0 3px;
+        border-radius: 4px;
+        transition: background-color 0.12s ease-in;
+        border-bottom: 2px solid transparent;
+      }
+
+      .token.hover {
+        outline: 1px solid #8ab4ff;
+        background: #edf4ff;
+      }
+
+      .token.invalid {
+        border-bottom-color: var(--warn);
+      }
+
+      .token .small {
+        color: #526071;
+        font-size: 12px;
+      }
+
+      .gap {
+        display: inline-block;
+        width: 4px;
+        min-height: 1em;
+      }
+
+      @media (max-width: 1100px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Melody-Lyrics 生产版原型（纯 HTML/JS）</h1>
+      <div class="subtitle">输入链路计算 + 渲染链路回算 + MIDI 上传 + 单字联动高亮</div>
+      <div id="statusText" class="status"></div>
+
+      <div class="toolbar">
+        <button class="primary" id="calcBtn">计算（原始输入）</button>
+        <button class="primary" id="applyRenderBtn">应用渲染（回算）</button>
+        <button class="secondary" id="undoBtn">撤销输入</button>
+      </div>
+
+      <div class="toolbar">
+        <input id="midiFileInput" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" />
+        <label class="label"
+          >每句小节数
+          <select id="barsPerSentence">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </label>
+        <label class="label"
+          >分句偏移
+          <select id="offsetFraction">
+            <option value="0.75">+0.75</option>
+            <option value="0.5">+0.5</option>
+            <option value="0.25">+0.25</option>
+            <option value="0" selected>+0</option>
+          </select>
+        </label>
+        <button class="secondary" id="parseMidiBtn">解析 MIDI 到旋律输入</button>
+        <button class="secondary" id="regroupMidiBtn">按设置重新分句</button>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="title">输入：歌词（原始输入）</div>
+          <div class="hint">支持多行。分词将由解析逻辑自动处理。</div>
+          <textarea id="lyricsInput"></textarea>
+        </div>
+        <div class="card">
+          <div class="title">输入：旋律（原始输入）</div>
+          <div class="hint">可手输，也可通过 MIDI 上传自动填充。</div>
+          <textarea id="melodyInput"></textarea>
+        </div>
+
+        <div class="card">
+          <div class="title">歌词渲染（单视图：可编辑+可视化）</div>
+          <div class="hint">仅允许修改拼音、分词斜线与换行；若改动汉字序列会自动回退。</div>
+          <div id="lyricsRenderEditor" class="editor" contenteditable="true" spellcheck="false"></div>
+        </div>
+        <div class="card">
+          <div class="title">旋律渲染（单视图：可编辑+可视化）</div>
+          <div class="hint">只读展示；支持与歌词窗口悬停联动高亮。</div>
+          <div id="melodyRenderEditor" class="editor readonly" contenteditable="false" spellcheck="false"></div>
+        </div>
+      </div>
+
+      <div class="card json" style="margin-top: 12px">
+        <div class="title">单字音程数组 JSON</div>
+        <textarea id="jsonOutput"></textarea>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.min.js"></script>
+    <script src="https://unpkg.com/pinyin-pro/dist/index.js"></script>
+    <script src="../core-js/lyrics-parser.js"></script>
+    <script src="../core-js/melody-parser.js"></script>
+    <script src="../core-js/integrator.js"></script>
+    <script src="../core-js/interval-config.js"></script>
+    <script src="../core-js/compute.js"></script>
+    <script src="../core-js/json2window.js"></script>
+    <script>
+      const lyricsInput = document.getElementById("lyricsInput");
+      const melodyInput = document.getElementById("melodyInput");
+      const lyricsRenderEditor = document.getElementById("lyricsRenderEditor");
+      const melodyRenderEditor = document.getElementById("melodyRenderEditor");
+      const jsonOutput = document.getElementById("jsonOutput");
+      const statusText = document.getElementById("statusText");
+
+      const calcBtn = document.getElementById("calcBtn");
+      const applyRenderBtn = document.getElementById("applyRenderBtn");
+      const undoBtn = document.getElementById("undoBtn");
+
+      const midiFileInput = document.getElementById("midiFileInput");
+      const parseMidiBtn = document.getElementById("parseMidiBtn");
+      const regroupMidiBtn = document.getElementById("regroupMidiBtn");
+      const barsPerSentenceSelect = document.getElementById("barsPerSentence");
+      const offsetFractionSelect = document.getElementById("offsetFraction");
+
+      const undoStack = [];
+      let inputDirty = false;
+      let currentSingleCharArray = [];
+      let currentParsedMidi = null;
+      let currentTemplateNotes = [];
+      let currentTimingInfo = { bpm: 120, beatsPerBar: 4, numerator: 4, denominator: 4 };
+      let lastValidLyricsRenderText = "";
+      let lastValidMelodyRenderText = "";
+      let autoCalcTimer = null;
+      let autoApplyTimer = null;
+
+      function setStatus(text, isError) {
+        statusText.className = "status " + (isError ? "err" : "ok");
+        statusText.textContent = text;
+      }
+
+      function pushInputVersion(source) {
+        const last = undoStack.length > 0 ? undoStack[undoStack.length - 1] : null;
+        const curr = {
+          lyricsText: lyricsInput.value,
+          melodyText: melodyInput.value,
+          source: source || "manual",
+          at: Date.now(),
+        };
+        if (last && last.lyricsText === curr.lyricsText && last.melodyText === curr.melodyText) return;
+        undoStack.push(curr);
+        undoBtn.disabled = undoStack.length <= 1;
+      }
+
+      function markInputDirty() {
+        inputDirty = true;
+      }
+
+      function maybeSnapshotInput(source) {
+        if (!inputDirty) return;
+        pushInputVersion(source);
+        inputDirty = false;
+      }
+
+      function popUndoVersion() {
+        if (undoStack.length <= 1) {
+          setStatus("没有可撤销的输入版本。", true);
+          return;
+        }
+        undoStack.pop();
+        const prev = undoStack[undoStack.length - 1];
+        lyricsInput.value = prev.lyricsText;
+        melodyInput.value = prev.melodyText;
+        inputDirty = false;
+        undoBtn.disabled = undoStack.length <= 1;
+        setStatus("已撤销到上一个输入版本。", false);
+      }
+
+      function getDeviationColorClass(deviations) {
+        const cfg = window.IntervalConfig && window.IntervalConfig.DEVIATION_HIGHLIGHT;
+        if (!cfg || !Array.isArray(deviations)) return null;
+        const nonZero = deviations.filter((n) => Number(n) !== 0).map((n) => Math.abs(Number(n)));
+        if (nonZero.length === 0) return null;
+        const maxAbs = Math.max.apply(null, nonZero);
+        if (maxAbs <= Number(cfg.lowMax || 2)) return cfg.colors.low;
+        return cfg.colors.high;
+      }
+
+      function escapeHtml(text) {
+        return String(text || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function normalizeEditorText(text) {
+        return String(text || "")
+          .replace(/\u00a0/g, " ")
+          .replace(/\u200b/g, "")
+          .replace(/\r\n/g, "\n")
+          .trim();
+      }
+
+      function compactSlashSpacing(text) {
+        return String(text || "").replace(/\s*\/\s*/g, "/");
+      }
+
+      function toComputeLyricsFormat(text) {
+        const src = String(text || "");
+        return src.replace(/([\u4e00-\u9fa5])\s*([a-zA-ZvV\u00fc\u00dc]+[0-4]?)/g, function (_m, ch, py) {
+          return ch + "(" + py + ")";
+        });
+      }
+
+      function getExpectedHanSequence() {
+        const arr = Array.isArray(currentSingleCharArray) ? currentSingleCharArray : [];
+        let chars = "";
+        arr.forEach((line) => {
+          (Array.isArray(line) ? line : []).forEach((segment) => {
+            (Array.isArray(segment) ? segment : []).forEach((item) => {
+              chars += String((item && item[0]) || "");
+            });
+          });
+        });
+        return chars;
+      }
+
+      function getHanSequenceFromRenderText(text) {
+        const matched = String(text || "").match(/[\u4e00-\u9fa5]/g);
+        return matched ? matched.join("") : "";
+      }
+
+      function setLyricsEditorText(text) {
+        lyricsRenderEditor.textContent = compactSlashSpacing(String(text || ""));
+      }
+
+      function getLyricsEditorText() {
+        const raw = normalizeEditorText(lyricsRenderEditor.innerText || lyricsRenderEditor.textContent || "");
+        return toComputeLyricsFormat(raw);
+      }
+
+      function setMelodyEditorText(text) {
+        melodyRenderEditor.textContent = compactSlashSpacing(String(text || ""));
+      }
+
+      function getMelodyEditorText() {
+        return normalizeEditorText(melodyRenderEditor.innerText || melodyRenderEditor.textContent || "");
+      }
+
+      function renderPreview() {
+        const lines = Array.isArray(currentSingleCharArray) ? currentSingleCharArray : [];
+        lyricsRenderEditor.innerHTML = "";
+        melodyRenderEditor.innerHTML = "";
+
+        lines.forEach((line, li) => {
+          const lyricLine = document.createElement("div");
+          lyricLine.className = "line";
+          const melodyLine = document.createElement("div");
+          melodyLine.className = "line";
+
+          (Array.isArray(line) ? line : []).forEach((segment, si) => {
+            const lyricSeg = document.createElement("span");
+            lyricSeg.className = "segment";
+            const melodySeg = document.createElement("span");
+            melodySeg.className = "segment";
+
+            (Array.isArray(segment) ? segment : []).forEach((item, ii) => {
+              const key = li + "-" + si + "-" + ii;
+              const char = item[0] || "";
+              const py = item[1] || "";
+              const tone = Number(item[2]) || 0;
+              const notes = Array.isArray(item[3]) ? item[3] : [];
+              const singleValid = Number(item[4]) === 1;
+              const leftDeviations = item[5] && Array.isArray(item[5][1]) ? item[5][1] : [];
+              const rightDeviations = item[6] && Array.isArray(item[6][1]) ? item[6][1] : [];
+
+              const leftColor = getDeviationColorClass(leftDeviations);
+              const rightColor = getDeviationColorClass(rightDeviations);
+
+              const lyricToken = document.createElement("span");
+              lyricToken.className = "token" + (singleValid ? "" : " invalid");
+              lyricToken.dataset.key = key;
+              lyricToken.innerHTML = escapeHtml(char) + '<span class="small">' + escapeHtml(py + tone) + "</span>";
+
+              if (leftColor || rightColor) {
+                const bg = "linear-gradient(to right, " +
+                  (leftColor ? leftColor + "55" : "transparent") +
+                  " 0%, " +
+                  (leftColor ? leftColor + "55" : "transparent") +
+                  " 50%, " +
+                  (rightColor ? rightColor + "55" : "transparent") +
+                  " 50%, " +
+                  (rightColor ? rightColor + "55" : "transparent") +
+                  " 100%)";
+                lyricToken.style.backgroundImage = bg;
+              }
+
+              const melodyToken = document.createElement("span");
+              melodyToken.className = "token" + (singleValid ? "" : " invalid");
+              melodyToken.dataset.key = key;
+              melodyToken.textContent = notes.join("-");
+
+              if (leftColor || rightColor) {
+                const bg = "linear-gradient(to right, " +
+                  (leftColor ? leftColor + "55" : "transparent") +
+                  " 0%, " +
+                  (leftColor ? leftColor + "55" : "transparent") +
+                  " 50%, " +
+                  (rightColor ? rightColor + "55" : "transparent") +
+                  " 50%, " +
+                  (rightColor ? rightColor + "55" : "transparent") +
+                  " 100%)";
+                melodyToken.style.backgroundImage = bg;
+              }
+
+              lyricSeg.appendChild(lyricToken);
+              melodySeg.appendChild(melodyToken);
+
+              const segArr = Array.isArray(segment) ? segment : [];
+              if (ii < segArr.length - 1) {
+                const lyricGap = document.createElement("span");
+                lyricGap.className = "gap";
+                lyricGap.textContent = "\u200b";
+                lyricSeg.appendChild(lyricGap);
+
+                const melodyGap = document.createElement("span");
+                melodyGap.className = "gap";
+                melodyGap.textContent = "\u200b";
+                melodySeg.appendChild(melodyGap);
+              }
+            });
+
+            if (si < (Array.isArray(line) ? line.length : 0) - 1) {
+              const lyricSep = document.createElement("span");
+              lyricSep.className = "token";
+              lyricSep.textContent = "/";
+              lyricSeg.appendChild(lyricSep);
+
+              const melodySep = document.createElement("span");
+              melodySep.className = "token";
+              melodySep.textContent = "/";
+              melodySeg.appendChild(melodySep);
+            }
+
+            lyricLine.appendChild(lyricSeg);
+            melodyLine.appendChild(melodySeg);
+          });
+
+          lyricsRenderEditor.appendChild(lyricLine);
+          melodyRenderEditor.appendChild(melodyLine);
+        });
+      }
+
+      function bindHoverSync() {
+        function clearHover() {
+          document.querySelectorAll(".token.hover").forEach((n) => n.classList.remove("hover"));
+        }
+
+        function onEnter(ev) {
+          const target = ev.target && ev.target.closest ? ev.target.closest(".token") : null;
+          if (!target) return;
+          const key = target.dataset.key;
+          clearHover();
+          document.querySelectorAll('.token[data-key="' + key + '"]').forEach((n) => n.classList.add("hover"));
+        }
+
+        function onLeave() {
+          clearHover();
+        }
+
+        lyricsRenderEditor.addEventListener("mouseover", onEnter);
+        melodyRenderEditor.addEventListener("mouseover", onEnter);
+        lyricsRenderEditor.addEventListener("mouseleave", onLeave);
+        melodyRenderEditor.addEventListener("mouseleave", onLeave);
+      }
+
+      function renderBySingleCharArray(arr) {
+        currentSingleCharArray = Array.isArray(arr) ? arr : [];
+        lastValidLyricsRenderText = window.Json2Window.singleCharToRenderLyrics(currentSingleCharArray);
+        setLyricsEditorText(lastValidLyricsRenderText);
+        lastValidMelodyRenderText = window.Json2Window.singleCharToRenderMelody(currentSingleCharArray);
+        setMelodyEditorText(lastValidMelodyRenderText);
+        jsonOutput.value = JSON.stringify(currentSingleCharArray, null, 2);
+        renderPreview();
+      }
+
+      function calcFromRawInputs() {
+        try {
+          maybeSnapshotInput("before-calc");
+          const arr = window.Compute.buildSingleCharIntervalArrayFromText(lyricsInput.value, melodyInput.value);
+          renderBySingleCharArray(arr);
+          setStatus("计算成功（原始输入链路）。", false);
+        } catch (err) {
+          setStatus("计算失败：" + (err && err.message ? err.message : String(err)), true);
+        }
+      }
+
+      function applyFromRenderPanels(options) {
+        const opts = options || {};
+        const recordVersion = opts.recordVersion !== false;
+        try {
+          const lyricsRenderText = getLyricsEditorText();
+          // Requirement: melody source for re-compute should come from input panel,
+          // not from read-only melody render panel.
+          const melodyRenderText = normalizeEditorText(melodyInput.value || "");
+          const arr = window.Compute.buildSingleCharIntervalArrayFromRenderText(lyricsRenderText, melodyRenderText);
+          currentSingleCharArray = arr;
+          lastValidLyricsRenderText = lyricsRenderText;
+          lastValidMelodyRenderText = melodyRenderText;
+          lyricsInput.value = window.Json2Window.singleCharToParsedLyrics(arr);
+          melodyInput.value = window.Json2Window.singleCharToParsedMelody(arr);
+          if (recordVersion) pushInputVersion("apply-render");
+          inputDirty = false;
+          jsonOutput.value = JSON.stringify(arr, null, 2);
+          renderPreview();
+          setStatus("应用渲染成功（渲染链路回算）。", false);
+        } catch (err) {
+          setStatus("应用渲染失败：" + (err && err.message ? err.message : String(err)), true);
+        }
+      }
+
+      async function parseMidiToMelodyInput() {
+        const file = midiFileInput.files && midiFileInput.files[0];
+        if (!file) {
+          setStatus("请先选择 MIDI 文件。", true);
+          return;
+        }
+        try {
+          const buf = await file.arrayBuffer();
+          currentParsedMidi = window.MidiParser.parseMidiArrayBuffer(buf);
+          currentTemplateNotes = window.MidiParser.flattenNotes(currentParsedMidi);
+          currentTimingInfo = window.MidiParser.getTimingInfo(currentParsedMidi);
+
+          melodyInput.value = window.MidiParser.notesToSentenceText(currentTemplateNotes, {
+            bpm: currentTimingInfo.bpm,
+            beatsPerBar: currentTimingInfo.beatsPerBar,
+            barsPerSentence: Number(barsPerSentenceSelect.value),
+            offsetFraction: Number(offsetFractionSelect.value),
+          });
+
+          markInputDirty();
+          maybeSnapshotInput("midi-parse");
+          setStatus(
+            "MIDI 解析成功：" +
+              file.name +
+              "，音符 " +
+              currentTemplateNotes.length +
+              "，拍号 " +
+              currentTimingInfo.numerator +
+              "/" +
+              currentTimingInfo.denominator,
+            false
+          );
+        } catch (err) {
+          setStatus("MIDI 解析失败：" + (err && err.message ? err.message : String(err)), true);
+        }
+      }
+
+      function regroupMidiToMelodyInput() {
+        try {
+          if (!Array.isArray(currentTemplateNotes) || currentTemplateNotes.length === 0) {
+            setStatus("请先解析 MIDI 文件。", true);
+            return;
+          }
+          melodyInput.value = window.MidiParser.notesToSentenceText(currentTemplateNotes, {
+            bpm: currentTimingInfo.bpm,
+            beatsPerBar: currentTimingInfo.beatsPerBar,
+            barsPerSentence: Number(barsPerSentenceSelect.value),
+            offsetFraction: Number(offsetFractionSelect.value),
+          });
+          markInputDirty();
+          maybeSnapshotInput("midi-regroup");
+          setStatus("已按当前小节和偏移设置重新分句。", false);
+        } catch (err) {
+          setStatus("重新分句失败：" + (err && err.message ? err.message : String(err)), true);
+        }
+      }
+
+      function init() {
+        lyricsInput.value = ["长亭外 古道边", "芳草碧连天"].join("\n");
+        melodyInput.value = ["G3 E3-G3 C4 A3 C4 G3", "G3 C3-D3 E3 D3-C3 D3"].join("\n");
+
+        pushInputVersion("initial");
+        undoBtn.disabled = true;
+        bindHoverSync();
+        calcFromRawInputs();
+      }
+
+      function onLyricsEditorInput() {
+        const candidate = getLyricsEditorText();
+        const expected = getExpectedHanSequence();
+        const got = getHanSequenceFromRenderText(candidate);
+        if (expected !== got) {
+          lastValidLyricsRenderText = window.Json2Window.singleCharToRenderLyrics(currentSingleCharArray);
+          renderPreview();
+          setStatus("仅可编辑拼音、斜线和换行；不允许增删或改动汉字。", true);
+          return;
+        }
+        lastValidLyricsRenderText = candidate;
+        scheduleAutoApply();
+      }
+
+      function scheduleAutoCalc() {
+        if (autoCalcTimer) clearTimeout(autoCalcTimer);
+        autoCalcTimer = setTimeout(function () {
+          calcFromRawInputs();
+        }, 180);
+      }
+
+      function scheduleAutoApply() {
+        if (autoApplyTimer) clearTimeout(autoApplyTimer);
+        autoApplyTimer = setTimeout(function () {
+          applyFromRenderPanels({ recordVersion: false });
+        }, 180);
+      }
+
+      lyricsInput.addEventListener("input", function () {
+        markInputDirty();
+        scheduleAutoCalc();
+      });
+      melodyInput.addEventListener("input", function () {
+        markInputDirty();
+        scheduleAutoApply();
+      });
+
+      calcBtn.addEventListener("click", calcFromRawInputs);
+      applyRenderBtn.addEventListener("click", applyFromRenderPanels);
+      undoBtn.addEventListener("click", popUndoVersion);
+      parseMidiBtn.addEventListener("click", parseMidiToMelodyInput);
+      regroupMidiBtn.addEventListener("click", regroupMidiToMelodyInput);
+      lyricsRenderEditor.addEventListener("input", onLyricsEditorInput);
+
+      init();
+    </script>
+  </body>
+</html>

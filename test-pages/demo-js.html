@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>demo-js 单字音程数组</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 18px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei",
+          sans-serif;
+        background: #f7f8fa;
+        color: #1f2329;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .card {
+        border: 1px solid #d9dde3;
+        border-radius: 10px;
+        background: #fff;
+        padding: 10px;
+      }
+      .title {
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 180px;
+        box-sizing: border-box;
+        border: 1px solid #cdd5df;
+        border-radius: 8px;
+        padding: 9px;
+        line-height: 1.5;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      }
+      .json textarea {
+        min-height: 240px;
+      }
+      .actions {
+        margin: 10px 0 12px;
+        display: flex;
+        gap: 10px;
+      }
+      button {
+        border: none;
+        border-radius: 8px;
+        padding: 8px 12px;
+        background: #1677ff;
+        color: #fff;
+        cursor: pointer;
+      }
+      .status {
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+      .ok {
+        color: #0f9d58;
+      }
+      .err {
+        color: #d93025;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>demo-js（单字音程数组）</h2>
+      <div id="statusText" class="status"></div>
+      <div class="actions">
+        <button id="calcBtn">计算（1+3 -> 单字音程数组）</button>
+        <button id="applyRenderBtn">应用计算渲染</button>
+        <!-- <button id="fromJsonBtn">JSON 反解析渲染</button> -->
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="title">输入：歌词</div>
+          <textarea id="lyricsInput"></textarea>
+        </div>
+        <div class="card">
+          <div class="title">输入：旋律</div>
+          <textarea id="melodyInput"></textarea>
+        </div>
+
+        <div class="card">
+          <div class="title">解析：歌词（空格分词）</div>
+          <textarea id="lyricsParsed" readonly></textarea>
+        </div>
+        <div class="card">
+          <div class="title">解析：旋律（斜杠分词）</div>
+          <textarea id="melodyParsed" readonly></textarea>
+        </div>
+
+        <div class="card">
+          <div class="title">计算渲染：歌词（字+拼音+音调，/分词）</div>
+          <textarea id="lyricsRender"></textarea>
+        </div>
+        <div class="card">
+          <div class="title">计算渲染：旋律（- 与 /）</div>
+          <textarea id="melodyRender"></textarea>
+        </div>
+      </div>
+
+      <div class="card json" style="margin-top: 12px">
+        <div class="title">单字音程数组 JSON</div>
+        <textarea id="jsonOutput"></textarea>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/pinyin-pro/dist/index.js"></script>
+    <script src="../core-js/lyrics-parser.js"></script>
+    <script src="../core-js/melody-parser.js"></script>
+    <script src="../core-js/integrator.js"></script>
+    <script src="../core-js/interval-config.js"></script>
+    <script src="../core-js/compute.js"></script>
+    <script src="../core-js/json2window.js"></script>
+    <script>
+      const lyricsInput = document.getElementById("lyricsInput");
+      const melodyInput = document.getElementById("melodyInput");
+      const lyricsParsed = document.getElementById("lyricsParsed");
+      const melodyParsed = document.getElementById("melodyParsed");
+      const lyricsRender = document.getElementById("lyricsRender");
+      const melodyRender = document.getElementById("melodyRender");
+      const jsonOutput = document.getElementById("jsonOutput");
+      const calcBtn = document.getElementById("calcBtn");
+      const applyRenderBtn = document.getElementById("applyRenderBtn");
+      const fromJsonBtn = document.getElementById("fromJsonBtn");
+      const statusText = document.getElementById("statusText");
+
+      lyricsInput.value = ["长亭外 古道边", "芳草碧连天"].join("\n");
+      melodyInput.value = ["G3 E3-G3 C4 A3 C4 G3", "G3 C3-D3 E3 D3-C3 D3"].join("\n");
+
+      function setStatus(text, isError) {
+        statusText.className = "status " + (isError ? "err" : "ok");
+        statusText.textContent = text;
+      }
+
+      function renderBySingleCharArray(arr) {
+        lyricsParsed.value = window.Json2Window.singleCharToParsedLyrics(arr);
+        melodyParsed.value = window.Json2Window.singleCharToParsedMelody(arr);
+        lyricsRender.value = window.Json2Window.singleCharToRenderLyrics(arr);
+        melodyRender.value = window.Json2Window.singleCharToRenderMelody(arr);
+      }
+
+      function calcFromInputs() {
+        try {
+          const arr = window.Compute.buildSingleCharIntervalArrayFromText(lyricsInput.value, melodyInput.value);
+          jsonOutput.value = JSON.stringify(arr, null, 2);
+          renderBySingleCharArray(arr);
+          setStatus("计算成功。", false);
+        } catch (err) {
+          setStatus(`计算失败：${err.message || String(err)}`, true);
+        }
+      }
+
+      function renderFromJson() {
+        try {
+          const arr = JSON.parse(jsonOutput.value || "[]");
+          renderBySingleCharArray(arr);
+          setStatus("JSON 反解析成功。", false);
+        } catch (err) {
+          setStatus(`JSON 解析失败：${err.message || String(err)}`, true);
+        }
+      }
+
+      function applyFromRenderPanels() {
+        try {
+          const arr = window.Compute.buildSingleCharIntervalArrayFromRenderText(
+            lyricsRender.value,
+            melodyRender.value
+          );
+          jsonOutput.value = JSON.stringify(arr, null, 2);
+          renderBySingleCharArray(arr);
+          setStatus("已应用计算渲染文本并更新 JSON。", false);
+        } catch (err) {
+          setStatus(`应用失败：${err.message || String(err)}`, true);
+        }
+      }
+
+      calcBtn.addEventListener("click", calcFromInputs);
+      applyRenderBtn.addEventListener("click", applyFromRenderPanels);
+      fromJsonBtn.addEventListener("click", renderFromJson);
+      calcFromInputs();
+    </script>
+  </body>
+  </html>

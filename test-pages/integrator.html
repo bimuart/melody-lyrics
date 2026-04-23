@@ -20,7 +20,7 @@
       .top,
       .bottom {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 12px;
       }
       .card {
@@ -108,6 +108,10 @@
           <div class="title">右侧：可编辑音名中间层（分句）</div>
           <textarea id="melodyMiddleInput"></textarea>
         </div>
+        <div class="card">
+          <div class="title">说明</div>
+          <pre>左/中/右输入会自动联动更新下方数组。</pre>
+        </div>
       </div>
 
       <div style="height: 12px"></div>
@@ -125,13 +129,19 @@
           <div class="title">右下：音名三维数组</div>
           <pre id="melody3dOutput"></pre>
         </div>
+        <div class="card">
+          <div class="title">最右：单字音程数组</div>
+          <pre id="singleCharOutput"></pre>
+        </div>
       </div>
     </div>
 
     <script src="https://unpkg.com/pinyin-pro/dist/index.js"></script>
-    <script src="./lyrics-parser.js"></script>
-    <script src="./melody-parser.js"></script>
-    <script src="./integrator.js"></script>
+    <script src="../core-js/lyrics-parser.js"></script>
+    <script src="../core-js/melody-parser.js"></script>
+    <script src="../core-js/integrator.js"></script>
+    <script src="../core-js/interval-config.js"></script>
+    <script src="../core-js/compute.js"></script>
     <script>
       const lyricsRawInput = document.getElementById("lyricsRawInput");
       const lyricMiddleInput = document.getElementById("lyricMiddleInput");
@@ -139,12 +149,13 @@
       const lyrics3dOutput = document.getElementById("lyrics3dOutput");
       const integrated3dOutput = document.getElementById("integrated3dOutput");
       const melody3dOutput = document.getElementById("melody3dOutput");
+      const singleCharOutput = document.getElementById("singleCharOutput");
       const statusText = document.getElementById("statusText");
       const buildLyricMiddleBtn = document.getElementById("buildLyricMiddleBtn");
       const buildAllBtn = document.getElementById("buildAllBtn");
 
-      lyricsRawInput.value = ["你好世界", "一起唱歌吧"].join("\n");
-      melodyMiddleInput.value = ["C4 D4 E4 F4", "G4-A4 B4 C5"].join("\n");
+      lyricsRawInput.value = ["长亭外 古道边", "芳草碧连天", "晚风拂柳笛声残", "夕阳山外山"].join("\n");
+      melodyMiddleInput.value = ["G3 E3-G3 C4 A3 C4 G3", "G3 C3-D3 E3 D3-C3 D3", "G3 E3-G3 C4 B3 A3 C4 G3", "G3 D3-E3 F3 B2 C3"].join("\n");
 
       function setStatus(text, isError) {
         statusText.className = "status " + (isError ? "err" : "ok");
@@ -168,10 +179,13 @@
 
           if (!merged.ok) {
             integrated3dOutput.textContent = "";
+            singleCharOutput.textContent = "";
             setStatus(merged.message, true);
             return;
           }
           integrated3dOutput.textContent = JSON.stringify(merged.integrated, null, 2);
+          const singleChars = window.Compute.buildSingleCharIntervalArray(merged.integrated);
+          singleCharOutput.textContent = JSON.stringify(singleChars, null, 2);
           setStatus(merged.message, false);
         } catch (err) {
           setStatus(`处理失败：${err.message || String(err)}`, true);
