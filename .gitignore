@@ -1,0 +1,22 @@
+/melody-check-web/node_modules/
+/melody-check-web/dist/
+/melody-check-web/dist-ssr/
+/melody-check-web/public/core-js/
+/melody-check-web/public/demo-cases/
+/melody-check-web/.env
+/melody-check-web/.env.*
+!/melody-check-web/.env.example
+
+# OS junk
+.DS_Store
+**/.DS_Store
+Thumbs.db
+**/Thumbs.db
+Desktop.ini
+**/Desktop.ini
+
+# Editor files
+.vscode/
+**/.vscode/
+.idea/
+**/.idea/

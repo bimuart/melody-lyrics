@@ -13,6 +13,9 @@ public/core-js
 public/demo-cases
 dist-ssr
 *.local
+.env
+.env.*
+!.env.example
 
 # Editor directories and files
 .vscode/*
