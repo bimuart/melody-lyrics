@@ -101,7 +101,7 @@ function setLyricsBodyEl(el: HTMLElement | null) {
     >
       <section class="out-card out-card--melody">
         <div class="out-head">
-          <h2 class="out-title out-title--melody">旋律结果</h2>
+          <h2 class="out-title out-title--melody">旋律校对</h2>
           <div class="out-head-actions">
             <span class="out-sub">计算每句匹配度</span>
           </div>
@@ -126,7 +126,7 @@ function setLyricsBodyEl(el: HTMLElement | null) {
       />
       <section class="out-card out-card--lyrics">
         <div class="out-head">
-          <h2 class="out-title out-title--lyrics">歌词结果</h2>
+          <h2 class="out-title out-title--lyrics">歌词校对</h2>
           <div class="out-head-actions">
             <span class="out-sub">编辑拼音、分隔线</span>
           </div>
@@ -274,12 +274,15 @@ function setLyricsBodyEl(el: HTMLElement | null) {
 .out-body {
   height: 100%;
   min-height: 0;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
   border: none;
   padding: 10px 12px 12px 14px;
   background: transparent;
   color: var(--ink);
-  white-space: pre-wrap;
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
   line-height: 1.6;
   box-sizing: border-box;
 }

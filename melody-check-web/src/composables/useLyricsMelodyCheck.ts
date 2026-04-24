@@ -573,8 +573,8 @@ export function useLyricsMelodyCheck() {
         scheduleAutoCalc();
         setStatus("AI分词已写入歌词输入。", false);
       } catch (legacyErr) {
-        const msg = legacyErr instanceof Error ? legacyErr.message : String(legacyErr || err);
-        setStatus("AI分词失败：" + msg, true);
+        console.warn("AI分词失败", legacyErr || err);
+        setStatus("AI服务器繁忙，请稍后再试或手动分词", true);
       }
     } finally {
       aiAnnotateLoading.value = false;

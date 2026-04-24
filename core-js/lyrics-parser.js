@@ -22,9 +22,94 @@
       .filter((line) => line.length > 0);
 
     return lines.map((line) => {
-      const runs = splitLineIntoHanRunsWithOptionalParens(line, allHanRegex);
-      return runs.map((run) => parseHanRunWithExplicitLast(run.hanRun, run.explicit, allHanRegex));
+      const segments = splitLineByCommonDelimiters(line);
+      if (segments.length === 0) return [];
+      return segments.map((segment) => parseSegmentToItems(segment, allHanRegex));
     });
+  }
+
+  function splitLineByCommonDelimiters(line) {
+    const text = String(line || "");
+    const segments = [];
+    let buf = "";
+    // 仅用于“括号本身不分词”：在括号内忽略常见分隔符切分
+    let parenDepth = 0; // () / （）
+    let squareDepth = 0; // [] / 【】
+
+    function flush() {
+      const s = buf.trim();
+      if (s) segments.push(s);
+      buf = "";
+    }
+
+    const isDelimiter = (ch) =>
+      /[\s\/／,，、。.!！？?；;：:·・\-—~～…]/.test(ch);
+
+    for (let i = 0; i < text.length; i += 1) {
+      const ch = text[i];
+      if (ch === "(" || ch === "（") {
+        parenDepth += 1;
+        buf += ch;
+        continue;
+      }
+      if (ch === ")" || ch === "）") {
+        parenDepth = Math.max(0, parenDepth - 1);
+        buf += ch;
+        continue;
+      }
+      if (ch === "[" || ch === "【") {
+        squareDepth += 1;
+        buf += ch;
+        continue;
+      }
+      if (ch === "]" || ch === "】") {
+        squareDepth = Math.max(0, squareDepth - 1);
+        buf += ch;
+        continue;
+      }
+
+      if (parenDepth === 0 && squareDepth === 0 && isDelimiter(ch)) {
+        flush();
+      } else {
+        buf += ch;
+      }
+    }
+    flush();
+    return segments;
+  }
+
+  function parseSegmentToItems(segmentText, allHanRegex) {
+    const text = String(segmentText || "");
+    const items = [];
+    const n = text.length;
+    let i = 0;
+
+    while (i < n) {
+      const ch = text[i];
+      if (!allHanRegex.test(ch)) {
+        i += 1;
+        continue;
+      }
+
+      const start = i;
+      while (i < n && allHanRegex.test(text[i])) i += 1;
+      const hanRun = text.slice(start, i);
+
+      let explicit = null;
+      if (i < n && (text[i] === "(" || text[i] === "（")) {
+        const close = text[i] === "（" ? "）" : ")";
+        i += 1;
+        const innerStart = i;
+        while (i < n && text[i] !== close) i += 1;
+        explicit = text.slice(innerStart, i).trim();
+        if (i < n && text[i] === close) i += 1;
+      }
+
+      const runItems = parseHanRunWithExplicitLast(hanRun, explicit, allHanRegex);
+      items.push.apply(items, runItems);
+    }
+
+    return items;
   }
 
   function splitLineIntoHanRunsWithOptionalParens(line, allHanRegex) {

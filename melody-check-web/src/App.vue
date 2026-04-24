@@ -106,9 +106,9 @@ async function onThemeCycle() {
 
       <div class="split-bar" aria-hidden="false">
         <div class="split-drag" @mousedown="onInputAreaDragDown" />
-        <span class="split-label">↓ 校对结果</span>
+        <span class="split-label">↓ 校对</span>
         <span class="split-hint">悬停任意歌词片段、旋律片段，查看声调分析</span>
-        <button type="button" class="btn-primary" @click="check.calcFromRawInputs">重新计算</button>
+        <button type="button" class="btn-primary" @click="check.calcFromRawInputs">重新校对</button>
       </div>
 
       <div class="result-wrap">

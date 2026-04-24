@@ -138,7 +138,7 @@ function syncInputScroll(from: "melody" | "lyrics") {
         <div class="card-head">
           <h2 class="input-title input-title--lyrics">歌词输入</h2>
           <div class="card-head-actions">
-            <span class="card-sub">空格或斜杠分词，特殊字可注音</span>
+            <span class="card-sub">用空格或斜杠分词，特殊字可注音</span>
             <button
               type="button"
               class="btn-sec"
@@ -332,7 +332,11 @@ function syncInputScroll(from: "melody" | "lyrics") {
   height: 100%;
   min-height: 0;
   box-sizing: border-box;
+  overflow-x: auto;
   overflow-y: auto;
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
   resize: none;
   border: none;
   background: transparent;
