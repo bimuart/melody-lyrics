@@ -1,0 +1,167 @@
+/* 暖米 × 深靛 — 设计令牌 */
+:root {
+  --bg: #f9f7f4;
+  --surface: #ffffff;
+  --surface-2: #f2efe9;
+  --border: #e8e4de;
+  --border-mid: #d0c9be;
+
+  --indigo-900: #1e3a5f;
+  --indigo-700: #2d5490;
+  --indigo-500: #4a6fa5;
+  --indigo-100: #dce9f7;
+  --indigo-50: #eef4fc;
+  /* A.1 与上下区色条 */
+  --melody-stripe: #85b7eb;
+  --lyrics-stripe: #5dcaa5;
+
+  --sage-600: #5a8a6a;
+  --sage-50: #eff7f2;
+
+  --rose-600: #a0354a;
+  --rose-50: #fdf0f2;
+
+  --amber-500: #ba7517;
+  --amber-50: #fef6e4;
+
+  --ink: #1c1814;
+  --ink-60: #6b6156;
+  --ink-30: #b0a99e;
+  --ink-10: #ede8e0;
+
+  /* 顶栏文案 */
+  --header-title: #edf2f8;
+  --header-sub: #7fa8d4;
+  --header-status-ok: #a8d4bc;
+  --header-status-err: #f2c4ce;
+  --header-bg: var(--indigo-900);
+  --header-ghost: #163050;
+  --header-ghost-text: #7fa8d4;
+  --header-ghost-hover: #1e3f66;
+  --header-ghost-text-hover: #a8c4e8;
+
+  --split-bar-bg: #e6f1fb;
+  --split-bar-border: #4a6fa5;
+  --split-label: var(--indigo-900);
+  --split-btn-bg: var(--indigo-100);
+  --split-btn-text: var(--indigo-900);
+  --split-btn-border: color-mix(in srgb, var(--indigo-500) 35%, var(--border-mid));
+  --split-btn-hover-bg: color-mix(in srgb, var(--indigo-100) 72%, var(--surface));
+  --split-btn-hover-border: color-mix(in srgb, var(--indigo-500) 50%, var(--border-mid));
+  --panel-fill: rgba(255, 255, 255, 0.45);
+
+  /* token 色块（蓝/绿/红/黄） */
+  --tok-blue-bg: #f2f7fd;
+  --tok-blue-text: #5f88bf;
+  --tok-green-bg: #f3f9f5;
+  --tok-green-text: #6fa583;
+  --tok-amber-bg: #fff8ea;
+  --tok-amber-text: #bb8a4a;
+  --tok-rose-bg: #fef4f6;
+  --tok-rose-text: #c88393;
+
+  --tooltip-bg: #1e3a5f;
+  --tooltip-title: #7fa8d4;
+  --tooltip-body: #edf2f8;
+  --tooltip-match: #a8d4bc;
+  --tooltip-mismatch: #f2c4ce;
+
+  --radius-card: 6px;
+  --radius-btn: 4px;
+  --radius-token: 4px;
+
+  --font-ui: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-serif: "Noto Serif SC", "Songti SC", serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+}
+
+html {
+  color-scheme: light;
+  font-family: var(--font-ui);
+}
+
+body {
+  color: var(--ink);
+  background: var(--bg);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-mid) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-mid);
+  border-radius: 4px;
+}
+
+/* 与 useTheme 协同：仅微调页面底，不改动顶栏 */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #171613;
+  --surface: #221f1a;
+  --surface-2: #2a2621;
+  --border: #3a342d;
+  --border-mid: #4f473e;
+  --ink: #ece7e0;
+  --ink-60: #aaa296;
+  --ink-30: #7b7267;
+
+  /* 深色下保留 indigo 层级语义（900 最深） */
+  --indigo-900: #2f4c72;
+  --indigo-700: #4c6f99;
+  --indigo-500: #7fa8d4;
+  --indigo-100: #304760;
+  --indigo-50: #26384d;
+
+  --sage-600: #7fb594;
+  --sage-50: #1f3229;
+  --amber-500: #d49a45;
+  --amber-50: #362913;
+  --rose-600: #d07a8f;
+  --rose-50: #382028;
+
+  --header-bg: #121923;
+  --header-title: #e8eef6;
+  --header-sub: #8caed2;
+  --header-status-ok: #8dc7a8;
+  --header-status-err: #dba0ae;
+  --header-ghost: #1f3043;
+  --header-ghost-text: #9bb8d8;
+  --header-ghost-hover: #294057;
+  --header-ghost-text-hover: #bdd2ea;
+
+  --split-bar-bg: #1d2b3a;
+  --split-bar-border: #49698f;
+  --split-label: #b6d0ea;
+  --split-btn-bg: #47658a;
+  --split-btn-text: #e8f1fb;
+  --split-btn-border: #6f8eb2;
+  --split-btn-hover-bg: #547398;
+  --split-btn-hover-border: #88a6c8;
+
+  --tooltip-bg: #101822;
+  --tooltip-title: #93b2d5;
+  --tooltip-body: #e3ebf4;
+  --tooltip-match: #8dc7a8;
+  --tooltip-mismatch: #dba0ae;
+  --panel-fill: rgba(24, 21, 18, 0.58);
+
+  --tok-blue-bg: #35475c;
+  --tok-blue-text: #aec6e1;
+  --tok-green-bg: #33463b;
+  --tok-green-text: #bad8c6;
+  --tok-amber-bg: #4a3c2b;
+  --tok-amber-text: #dfc59a;
+  --tok-rose-bg: #4c353f;
+  --tok-rose-text: #e0b1be;
+}

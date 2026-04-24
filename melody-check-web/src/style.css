@@ -1,0 +1,50 @@
+@import "./assets/tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--ink);
+}
+
+#app {
+  min-height: 100vh;
+}
+
+a {
+  color: var(--indigo-700);
+}
+
+/* 主按钮：分隔带「重新计算」等 */
+.btn-primary {
+  height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 0.5px solid var(--border-mid);
+  border-radius: 5px;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--ink-60);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-primary:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[contenteditable="true"]:focus-visible {
+  outline: 2px solid var(--indigo-500);
+  outline-offset: 1px;
+}
