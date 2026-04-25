@@ -18,6 +18,7 @@ const ANNOTATE_URL =
 const ANNOTATE_STREAM_URL =
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_LYRICS_ANNOTATE_STREAM_URL) ||
   "http://127.0.0.1:8000/api/lyrics/annotate/stream";
+const BASE_URL = (typeof import.meta !== "undefined" && import.meta.env?.BASE_URL) || "/";
 
 function assertCoreReady(): void {
   if (!window.Compute?.buildSingleCharIntervalArrayFromText) {
@@ -316,7 +317,9 @@ export function useLyricsMelodyCheck() {
     let parsed: { title: string; lyrics: string; melody: string } | null = null;
     let usedFallback = false;
     try {
-      const resp = await fetch(casePath);
+      const base = new URL(BASE_URL, window.location.origin);
+      const resolvedCasePath = /^https?:\/\//.test(casePath) ? casePath : new URL(casePath, base).toString();
+      const resp = await fetch(resolvedCasePath);
       if (!resp.ok) throw new Error("读取示例失败：" + casePath);
       const md = await resp.text();
       parsed = parseDemoCaseMarkdown(md);
