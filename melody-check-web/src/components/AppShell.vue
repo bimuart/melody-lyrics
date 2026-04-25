@@ -24,13 +24,13 @@ const statusShouldScroll = computed(() => !statusErr.value && statusText.value.l
     <div class="app-header-inner">
       <div class="brand">
         <h1 class="head-title">歌词字音 & 音乐旋律校对</h1>
-        <p class="head-sub">检查文字声调与旋律音程匹配情况，即“词曲咬合”，它仅是歌曲创作的众多要素之一。</p>
+        <p class="head-sub">检查文字声调与旋律音程匹配情况，即“词曲咬合”，它是歌曲创作的众多要素之一，并非程度越高越好。</p>
       </div>
       <p class="head-status" :class="[statusErr ? 'is-err' : 'is-ok', statusShouldScroll ? 'is-scroll' : '']">
         <span class="status-text">{{ statusText || "" }}</span>
       </p>
       <div class="head-tools">
-        <button type="button" class="ghost" @click="emit('sample')">示例</button>
+        <button type="button" class="ghost" @click="emit('sample')">切换示例</button>
         <button
           type="button"
           class="ghost theme-ghost"

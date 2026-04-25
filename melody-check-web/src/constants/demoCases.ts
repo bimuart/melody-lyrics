@@ -1,13 +1,8 @@
-export const DEMO_CASE_FILES = [
-  "/demo-cases/case-01.md",
-  "/demo-cases/case-02.md",
-  "/demo-cases/case-03.md",
-  "/demo-cases/case-04.md",
-] as const;
+export { DEMO_CASE_FILES } from "./demoCaseFiles.generated";
 
 export const DEMO_CASE_FALLBACK = [
   {
-    title: "送别片段",
+    title: "示例 1",
     lyrics: [
       "长亭外 古道边",
       "芳草 碧 连天",
@@ -30,7 +25,7 @@ export const DEMO_CASE_FALLBACK = [
     ].join("\n"),
   },
   {
-    title: "江南春色",
+    title: "示例 2",
     lyrics: [
       "还 记得 年少时的 梦吗",
       "像朵 永远 不凋零的 花",
@@ -55,7 +50,7 @@ export const DEMO_CASE_FALLBACK = [
     ].join("\n"),
   },
   {
-    title: "思乡短句",
+    title: "示例 3",
     lyrics: [
       "你问 我爱你 有多深",
       "我爱你 有几分",
@@ -82,7 +77,7 @@ export const DEMO_CASE_FALLBACK = [
     ].join("\n"),
   },
   {
-    title: "春晓片段",
+    title: "示例 4",
     lyrics: [
       "轻轻 敲醒 沉睡的 心灵",
       "慢慢 张开 你的 眼睛",
