@@ -5,6 +5,9 @@ on:
     branches: ["deploy"]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 permissions:
   contents: read
   pages: write
@@ -17,6 +20,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      VITE_LYRICS_ANNOTATE_URL: ${{ vars.VITE_LYRICS_ANNOTATE_URL }}
+      VITE_LYRICS_ANNOTATE_STREAM_URL: ${{ vars.VITE_LYRICS_ANNOTATE_STREAM_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
