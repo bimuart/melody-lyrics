@@ -37,7 +37,7 @@ const statusShouldScroll = computed(() => !statusErr.value && statusText.value.l
           :title="isDark ? '切换浅色模式' : '切换深色模式'"
           @click="emit('themeCycle')"
         >
-          <span aria-hidden="true">{{ isDark ? "☀" : "☾" }}</span>
+          <span aria-hidden="true">{{ isDark ? "☾" : "☀" }}</span>
         </button>
       </div>
     </div>
