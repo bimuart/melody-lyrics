@@ -71,6 +71,7 @@ export function useLyricsMelodyCheck() {
   const demoCaseIndex = ref(-1);
   const aiAnnotateLoading = ref(false);
   let aiAnnotateController: AbortController | null = null;
+  let demoCaseController: AbortController | null = null;
   /** Lyrics result contenteditable root (for applyFromRenderPanels / scheduleAutoApply). */
   const lyricsEditorElement = shallowRef<HTMLElement | null>(null);
 
@@ -316,21 +317,31 @@ export function useLyricsMelodyCheck() {
   async function loadDemoCase(casePath: string, fallbackCase: (typeof DEMO_CASE_FALLBACK)[number] | undefined) {
     let parsed: { title: string; lyrics: string; melody: string } | null = null;
     let usedFallback = false;
+    const controller = demoCaseController;
     try {
       const base = new URL(BASE_URL, window.location.origin);
       const resolvedCasePath = /^https?:\/\//.test(casePath) ? casePath : new URL(casePath, base).toString();
-      const resp = await fetch(resolvedCasePath);
+      const resp = await fetch(resolvedCasePath, {
+        signal: controller?.signal,
+      });
       if (!resp.ok) throw new Error("读取示例失败：" + casePath);
       const md = await resp.text();
       parsed = parseDemoCaseMarkdown(md);
       if (!parsed.lyrics || !parsed.melody) {
         throw new Error("示例格式错误，需包含“歌词/旋律”代码块。");
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        throw err;
+      }
       parsed = fallbackCase
         ? { title: fallbackCase.title, lyrics: fallbackCase.lyrics, melody: fallbackCase.melody }
         : null;
       usedFallback = true;
+    } finally {
+      if (demoCaseController === controller) {
+        demoCaseController = null;
+      }
     }
 
     if (!parsed || !parsed.lyrics || !parsed.melody) {
@@ -344,9 +355,16 @@ export function useLyricsMelodyCheck() {
   }
 
   function nextDemoCase() {
+    aiAnnotateController?.abort();
+    demoCaseController?.abort();
+    demoCaseController = new AbortController();
     demoCaseIndex.value = (demoCaseIndex.value + 1) % DEMO_CASE_FILES.length;
     const idx = demoCaseIndex.value;
     loadDemoCase(DEMO_CASE_FILES[idx], DEMO_CASE_FALLBACK[idx]).catch((err) => {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setStatus("已取消上一次示例请求。", false);
+        return;
+      }
       setStatus("加载示例失败：" + (err instanceof Error ? err.message : String(err)), true);
     });
   }
@@ -456,11 +474,12 @@ export function useLyricsMelodyCheck() {
       .trim();
   }
 
-  async function requestAiLyricsAnnotateLegacy(text: string) {
+  async function requestAiLyricsAnnotateLegacy(text: string, signal?: AbortSignal) {
     const resp = await fetch(String(ANNOTATE_URL), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
+      signal,
     });
     let payload: unknown = null;
     try {
@@ -576,7 +595,7 @@ export function useLyricsMelodyCheck() {
         if (!fallbackText) {
           throw new Error("fallback 过滤后为空");
         }
-        await requestAiLyricsAnnotateLegacy(fallbackText);
+        await requestAiLyricsAnnotateLegacy(fallbackText, aiAnnotateController?.signal);
         scheduleAutoCalc();
         setStatus("AI分词已写入歌词输入。", false);
       } catch (legacyErr) {
@@ -616,6 +635,7 @@ export function useLyricsMelodyCheck() {
   });
   onUnmounted(() => {
     aiAnnotateController?.abort();
+    demoCaseController?.abort();
     removeLayoutMq?.();
   });
 
