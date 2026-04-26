@@ -103,7 +103,7 @@ export function useLyricsMelodyCheck() {
       const lyricsText = toComputeLyricsFormat(lyricsInput.value);
       const arr = window.Compute!.buildSingleCharIntervalArrayFromText(lyricsText, melodyInput.value);
       renderBySingleCharArray(arr as unknown[][]);
-      setStatus("计算成功（原始输入链路）。", false);
+      setStatus("歌词旋律已实时校验。", false);
     } catch (err) {
       setStatus("计算失败：" + (err instanceof Error ? err.message : String(err)), true);
     }
@@ -483,8 +483,8 @@ export function useLyricsMelodyCheck() {
   }
 
   async function requestAiLyricsAnnotate() {
-    const text = toAnnotatePlainLyricsText(lyricsInput.value).trim();
-    if (!text) {
+    const rawText = String(lyricsInput.value || "").trim();
+    if (!rawText) {
       setStatus("请先填写歌词输入。", true);
       return;
     }
@@ -499,7 +499,7 @@ export function useLyricsMelodyCheck() {
           "Content-Type": "application/json",
           Accept: "text/event-stream",
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text: rawText }),
         signal: aiAnnotateController.signal,
       });
       if (!resp.ok) {
@@ -572,7 +572,11 @@ export function useLyricsMelodyCheck() {
         return;
       }
       try {
-        await requestAiLyricsAnnotateLegacy(text);
+        const fallbackText = toAnnotatePlainLyricsText(rawText).trim();
+        if (!fallbackText) {
+          throw new Error("fallback 过滤后为空");
+        }
+        await requestAiLyricsAnnotateLegacy(fallbackText);
         scheduleAutoCalc();
         setStatus("AI分词已写入歌词输入。", false);
       } catch (legacyErr) {
